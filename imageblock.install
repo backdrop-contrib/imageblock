@@ -11,19 +11,20 @@
 function imageblock_schema() {
   $schema = array();
   $schema['imageblock'] = array(
-    'description' => 'Stores ',
+    'description' => 'Stores contents of custom-made image blocks.',
     'fields' => array(
       'bid' => array(
         'type' => 'serial',
-  'unsigned' => TRUE,
+        'unsigned' => TRUE,
         'not null' => TRUE,
-        'description' => "The block's {blocks}.bid.",
+        'description' => "The block's {block}.bid.",
       ),
       'body' => array(
         'type' => 'text',
         'not null' => FALSE,
         'size' => 'big',
         'description' => 'Block contents.',
+        'translatable' => TRUE,
       ),
       'info' => array(
         'type' => 'varchar',
@@ -33,11 +34,10 @@ function imageblock_schema() {
         'description' => 'Block description.',
       ),
       'format' => array(
-        'type' => 'int',
-        'size' => 'small',
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => "Block body's {filter_formats}.format; for example, 1 = Filtered HTML.",
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => 'The {filter_format}.format of the block body.',
       ),
       'fid' => array(
         'type' => 'int',
@@ -53,27 +53,23 @@ function imageblock_schema() {
         'description' => 'A serialized array of name value pairs that are related to the block file.',
       ),
     ),
-    'primary key' => array('bid', 'fid'),
+    'unique keys' => array(
+      'info' => array('info'),
+    ),
     'indexes' => array(
-      'bid' => array('bid'),
       'fid' => array('fid'),
     ),
+    'primary key' => array('bid'),
   );
   
   return $schema;
 }
 
 /**
- * Implements hook_install().
- */
-function imageblock_install() {
-  drupal_install_schema('imageblock');
-}
-
-/**
  * Implements hook_uninstall().
  */
 function imageblock_uninstall() {
-  drupal_uninstall_schema('imageblock');
-  db_query("DELETE FROM {variable} WHERE name IN ('imageblock_max_file_size', 'imageblock_max_dimensions')");
+  variable_del('imageblock_max_file_size');
+  variable_del('imageblock_max_dimensions');
+  variable_del('imageblock_image_path');
 }

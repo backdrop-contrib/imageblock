@@ -1,17 +1,16 @@
 <?php
 
 /**
- * @file imageblock-block.tpl.php
- *
- * Theme implementation to display a block.
+ * @file
+ * Default theme implementation to display image block content.
  *
  * Available variables:
- * - $block: Block object.
- * - $image: Block image content.
+ * - $image: Block image.
  * - $content: Block content.
+ * - $block: Block object.
  *
  * @see template_preprocess()
- * @see template_preprocess_imageblock_block()
+ * @see template_preprocess_imageblock_content()
  */
 ?>
 <?php if ($image): ?>

@@ -11,9 +11,9 @@
  */
 function imageblock_theme() {
   return array(
-    'imageblock_block' => array(
-      'arguments' => array('block' => NULL),
-      'template' => 'imageblock-block',
+    'imageblock_content' => array(
+      'render element' => 'elements',
+      'template' => 'imageblock-content',
     ),
   );
 }
@@ -22,61 +22,127 @@ function imageblock_theme() {
  * Implements hook_menu().
  */
 function imageblock_menu() {
-  $items['admin/build/block/imageblockadd'] = array(
+  $items['admin/structure/block/imageblock_add'] = array(
     'title' => 'Add image block',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('imageblock_add_block_form'),
     'access arguments' => array('administer blocks'),
-    'type' => MENU_LOCAL_TASK,
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'imageblock.admin.inc',
   );
-  $items['admin/settings/imageblock'] = array(
-    'title' => 'Image block',
-    'description' => 'Configure Image block.',
+  $items['admin/structure/block/imageblock_configure'] = array(
+    'title' => 'Image block settings',
+    'description' => 'Configure Image block settings.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('imageblock_admin_settings_form'),
-    'access arguments' => array('administer site'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'imageblock.admin.inc',
+  );
+  $items['admin/structure/block/manage/imageblock/%/delete'] = array(
+    'title' => 'Delete block',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('imageblock_custom_block_delete', 5),
+    'access arguments' => array('administer blocks'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_NONE,
     'file' => 'imageblock.admin.inc',
   );
   return $items;
 }
 
 /**
- * Implements hook_block().
+ * Implements hook_block_info().
  */
-function imageblock_block($op = 'list', $delta = 0, $edit = array()) {
-  switch ($op) {
-    case 'list':
-      $blocks = array();
+function imageblock_block_info() {
+  $blocks = array();
 
-      $result = db_query('SELECT bid, info FROM {imageblock} ORDER BY info');
-      while ($block = db_fetch_object($result)) {
-        $blocks[$block->bid]['info'] = $block->info;
-        // Not worth caching.
-        $blocks[$block->bid]['cache'] = BLOCK_NO_CACHE;
-      }
-      return $blocks;
-
-    case 'configure':
-      $box = array('format' => FILTER_FORMAT_DEFAULT);
-      if ($delta) {
-        $box = imageblock_get($delta);
-      }
-      $form = array();
-      if (filter_access($box['format'])) {
-        $form += block_box_form($box);
-      }
-      imageblock_configure_form($form, $box);
-      return $form;
-
-    case 'save':
-      imageblock_save($edit, $delta);
-      break;
-
-    case 'view':
-      $block = db_fetch_object(db_query('SELECT body, format, fid, data FROM {imageblock} WHERE bid = %d', $delta));
-      $data['content'] = theme('imageblock_block', $block);
-      return $data;
+  $result = db_query('SELECT bid, info FROM {imageblock} ORDER BY info');
+  foreach ($result as $block) {
+    $blocks[$block->bid]['info'] = $block->info;
+    // Not worth caching.
+    $blocks[$block->bid]['cache'] = DRUPAL_NO_CACHE;
   }
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function imageblock_block_configure($delta = '') {
+  if ($delta) {
+    $custom_block = block_imageblock_get($delta);
+  }
+  else {
+    $custom_block = array();
+  }
+  $form = block_custom_block_form($custom_block);
+  imageblock_configure_form($form, $custom_block);
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function imageblock_block_save($delta = '', $edit = array()) {
+  $data = array();
+  if (!empty($edit['imageblock_imagecache'])) {
+    $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
+  }
+  if (!empty($edit['imageblock_link'])) {
+    $data['imageblock_link'] = $edit['imageblock_link'];
+  }
+  if (!empty($edit['imageblock_link_target'])) {
+    $data['imageblock_link_target'] = $edit['imageblock_link_target'];
+  }
+  
+  $old_file = imageblock_get_file($delta);
+  if (!empty($edit['imageblock_file'])) {
+    $file = $edit['imageblock_file'];
+    // If the user uploaded a file, save it to a permanent location.
+    if (!empty($file->fid)) {
+      // If there is an old file, delete it.
+      if (!empty($old_file->fid)) {
+        file_usage_delete($old_file, 'imageblock', 'imageblock', $delta);
+        file_delete($old_file);
+      }
+      
+      $directory =  file_default_scheme() . '://' . variable_get('imageblock_image_path', 'imageblock');
+      
+      // Prepare the directory.
+      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+      $destination = file_stream_wrapper_uri_normalize($directory . "/$file->filename");
+
+      // Move the temporary file into the final location.
+      if ($file = file_move($file, $destination, FILE_EXISTS_RENAME)) {
+        $file->status = FILE_STATUS_PERMANENT;
+        file_save($file);
+        file_usage_add($file, 'imageblock', 'imageblock', $delta);
+      }
+    }
+  }
+  
+  db_update('imageblock')
+    ->fields(array(
+      'body' => $edit['body']['value'],
+      'info' => $edit['info'],
+      'format' => $edit['body']['format'],
+      'fid' => !empty($file) ? $file->fid : (!empty($old_file) ? $old_file->fid : 0),
+      'data' => serialize($data),
+    ))
+    ->condition('bid', $delta)
+    ->execute();
+
+  return TRUE;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function imageblock_block_view($delta = '') {
+  $block = db_query('SELECT body, format, fid, data FROM {imageblock} WHERE bid = :bid', array(':bid' => $delta))->fetchObject();
+  $data['subject'] = NULL;
+  $data['content'] = theme('imageblock_content', array('block' => $block));
+  return $data;
 }
 
 /**
@@ -89,38 +155,17 @@ function imageblock_form_alter(&$form, &$form_state, $form_id) {
       $form['#validate'][] = 'imageblock_configure_form_validate';
     }
   }
-}
-
-/**
- * Menu callback: display the custom image block addition form.
- */
-function imageblock_add_block_form() {
-  module_load_include('inc', 'block', 'block.admin');
-  return block_admin_configure($form_state, 'imageblock', NULL);
-}
-
-/**
- * Save the new custom block.
- */
-function imageblock_add_block_form_submit($form, &$form_state) {
-  db_query("INSERT INTO {imageblock} (body, info, format) VALUES ('%s', '%s', %d)", $form_state['values']['body'], $form_state['values']['info'], $form_state['values']['format']);
-  $delta = db_last_insert_id('boxes', 'bid');
-
-  foreach (list_themes() as $key => $theme) {
-    if ($theme->status) {
-      db_query("INSERT INTO {blocks} (visibility, pages, custom, title, module, theme, status, weight, delta, cache) VALUES(%d, '%s', %d, '%s', '%s', '%s', %d, %d, '%s', %d)", $form_state['values']['visibility'], trim($form_state['values']['pages']), $form_state['values']['custom'], $form_state['values']['title'], $form_state['values']['module'], $theme->name, 0, 0, $delta, BLOCK_NO_CACHE);
+  elseif ($form_id == 'block_admin_display_form') {
+    foreach ($form['blocks'] as $key => $element) {
+      if ($element['module']['#value'] == 'imageblock') {
+        $form['blocks'][$key]['delete'] = array(
+          '#type' => 'link',
+          '#title' => t('delete'),
+          '#href' => 'admin/structure/block/manage/imageblock/' . $element['delta']['#value'] . '/delete',
+       );
+      }
     }
   }
-
-  foreach (array_filter($form_state['values']['roles']) as $rid) {
-    db_query("INSERT INTO {blocks_roles} (rid, module, delta) VALUES (%d, '%s', '%s')", $rid, $form_state['values']['module'], $delta);
-  }
-
-  drupal_set_message(t('The image block has been created.'));
-  cache_clear_all();
-
-  $form_state['redirect'] = 'admin/build/block';
-  return;
 }
 
 function imageblock_configure_form(&$form, $block = NULL) {
@@ -134,11 +179,14 @@ function imageblock_configure_form(&$form, $block = NULL) {
       $form['imageblock_prev'] = array(
         '#type' => 'item',
         '#title' => t('Image'),
-        '#value' => $file->filename,
+        '#markup' => $file->filename,
         '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.6 : 0,
       );
     }
   }
+  
+  // Do not require body as we can have an image as the body.
+  $form['body_field']['body']['#required'] = FALSE;
   
   $data = !empty($block['data']) ? unserialize($block['data']) : array();
   
@@ -171,15 +219,15 @@ function imageblock_configure_form(&$form, $block = NULL) {
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.2 : 0,
   );
   
-  if (module_exists('imagecache')) {
+  if (module_exists('image')) {
     $options = array();
-    foreach (imagecache_presets() as $preset) {
-      $options[$preset['presetname']] = $preset['presetname'];
+    foreach (image_styles() as $key => $preset) {
+      $options[$key] = $preset['name'];
     }
     if (!empty($options)) {
       $form['imageblock_imagecache'] = array(
         '#type' => 'select',
-        '#title' => t('Imagecache Preset'),
+        '#title' => t('Image style'),
         '#options' => array('' => t('<none>')) + $options,
         '#default_value' => isset($data['imageblock_imagecache']) ? $data['imageblock_imagecache'] : '',
         '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.4 : 0,
@@ -199,78 +247,55 @@ function imageblock_configure_form_validate($form, &$form_state) {
   }
 
   // Save new file uploads.
-  if (!($file = file_save_upload('imageblock', $validators, file_directory_path()))) {
-    return;
+  $file = file_save_upload('imageblock', $validators);
+  if ($file === FALSE) {
+    form_set_error('imageblock', t("Failed to upload the image; the %directory directory doesn't exist or is not writable.", array('%directory' => variable_get('imageblock_image_path', 'imageblock'))));
   }
-  
-  $form_state['values']['imageblock_file'] = $file;
+  elseif ($file !== NULL) {
+    $form_state['values']['imageblock_file'] = $file;
+  }
 }
 
 /**
  * Returns information from database about a user-created (custom) image block.
  */
-function imageblock_get($bid) {
-  return db_fetch_array(db_query("SELECT * FROM {imageblock} WHERE bid = %d", $bid));
+function block_imageblock_get($bid) {
+  return db_query("SELECT * FROM {imageblock} WHERE bid = :bid", array(':bid' => $bid))->fetchAssoc();
 }
 
 /**
  * Returns the file information for a give block ID.
  */
 function imageblock_get_file($bid) {
-  return db_fetch_object(db_query('SELECT f.* FROM {files} f INNER JOIN {imageblock} i ON f.fid = i.fid WHERE i.bid = %d', $bid));
+  $fid = db_query("SELECT fid FROM {imageblock} WHERE bid = :bid", array(':bid' => $bid))->fetchField();
+  return file_load($fid);
 }
 
 /**
- * Saves a user-created image block in the database.
- */
-function imageblock_save($edit, $delta) {
-  if (!filter_access($edit['format'])) {
-    $edit['format'] = FILTER_FORMAT_DEFAULT;
-  }
-  
-  $data = array();
-  if (!empty($edit['imageblock_imagecache'])) {
-    $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
-  }
-  if (!empty($edit['imageblock_link'])) {
-    $data['imageblock_link'] = $edit['imageblock_link'];
-  }
-  if (!empty($edit['imageblock_link_target'])) {
-    $data['imageblock_link_target'] = $edit['imageblock_link_target'];
-  }
-  
-  $file = $edit['imageblock_file'];
-  $old_file = imageblock_get_file($delta);
-  if (!empty($file->fid) && !empty($old_file->fid)) {
-    file_delete($old_file->filepath);
-    db_query('DELETE FROM {files} WHERE fid = %d', $old_file->fid);
-  }
-  
-  db_query("UPDATE {imageblock} SET body = '%s', info = '%s', format = %d, fid = %d, data = '%s' WHERE bid = %d", $edit['body'], $edit['info'], $edit['format'], !empty($file) ? $file->fid : $old_file->fid, serialize($data), $delta);
-
-  return TRUE;
-}
-
-/**
- * Process variables for imageblock-block.tpl.php.
+ * Process variables for imageblock-content.tpl.php.
  *
  * The $variables array contains the following arguments:
  * - $block
  *
- * @see imageblock-block.tpl.php
+ * @see imageblock-content.tpl.php
  */
-function template_preprocess_imageblock_block(&$variables) {
+function template_preprocess_imageblock_content(&$variables) {
+  $variables['image'] = '';
   $block = $variables['block'];
   $data = !empty($block->data) ? unserialize($block->data) : array();
   if (!empty($block->fid)) {
-    $file = db_fetch_object(db_query('SELECT * FROM {files} WHERE fid = %d', $block->fid));
+    $file = file_load($block->fid);
     if (!empty($file->fid)) {
       $attributes = array('class' => 'imageblock-image');
-      if (module_exists('imagecache') && !empty($data['imageblock_imagecache']) && $preset = imagecache_preset_by_name($data['imageblock_imagecache'])) {
-        $variables['image'] = theme('imagecache', $preset['presetname'], $file->filepath, NULL, NULL, $attributes);
+      $variables = array(
+        'path' => $file->uri,
+        'attributes' => $attributes,
+      );
+      if (module_exists('image') && !empty($data['imageblock_imagecache']) && $preset = image_style_load($data['imageblock_imagecache'])) {
+        $variables['image'] = theme('image_style', $variables + array('style_name' => $preset['name']));
       }
       else {
-        $variables['image'] = theme('image', $file->filepath, NULL, NULL, $attributes);
+        $variables['image'] = theme('image', $variables);
       }
       if (!empty($data['imageblock_link'])) {
         $attributes = array('class' => 'imageblock-link');
@@ -282,5 +307,5 @@ function template_preprocess_imageblock_block(&$variables) {
     }
   }
   
-  $variables['content'] = check_markup($block->body, $block->format, FALSE);
+  $variables['content'] = check_markup($block->body, $block->format, '', TRUE);
 }
