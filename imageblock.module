@@ -287,10 +287,8 @@ function template_preprocess_imageblock_content(&$variables) {
     $file = file_load($block->fid);
     if (!empty($file->fid)) {
       $attributes = array('class' => 'imageblock-image');
-      $variables = array(
-        'path' => $file->uri,
-        'attributes' => $attributes,
-      );
+      $variables['path'] = $file->uri;
+      $variables['attributes'] = $attributes;
       if (module_exists('image') && !empty($data['imageblock_imagecache']) && $preset = image_style_load($data['imageblock_imagecache'])) {
         $variables['image'] = theme('image_style', $variables + array('style_name' => $preset['name']));
       }
