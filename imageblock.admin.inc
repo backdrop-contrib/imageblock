@@ -115,6 +115,8 @@ function imageblock_add_block_form_submit($form, &$form_state) {
       ->execute();
   }
 
+  imageblock_block_save($delta, $form_state['values']);
+
   drupal_set_message(t('The image block has been created.'));
   cache_clear_all();
   $form_state['redirect'] = 'admin/structure/block';
@@ -154,11 +156,11 @@ function imageblock_custom_block_delete_submit($form, &$form_state) {
     ->condition('bid', $form_state['values']['bid'])
     ->execute();
   db_delete('block')
-    ->condition('module', 'block')
+    ->condition('module', 'imageblock')
     ->condition('delta', $form_state['values']['bid'])
     ->execute();
   db_delete('block_role')
-    ->condition('module', 'block')
+    ->condition('module', 'imageblock')
     ->condition('delta', $form_state['values']['bid'])
     ->execute();
   

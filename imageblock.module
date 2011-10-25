@@ -27,8 +27,8 @@ function imageblock_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('imageblock_add_block_form'),
     'access arguments' => array('administer blocks'),
-    'type' => MENU_LOCAL_ACTION,
     'file' => 'imageblock.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
   );
   $items['admin/structure/block/imageblock_configure'] = array(
     'title' => 'Image block settings',
@@ -43,8 +43,7 @@ function imageblock_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('imageblock_custom_block_delete', 5),
     'access arguments' => array('administer blocks'),
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_NONE,
+    'type' => MENU_CALLBACK,
     'file' => 'imageblock.admin.inc',
   );
   return $items;
