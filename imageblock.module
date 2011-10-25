@@ -50,6 +50,19 @@ function imageblock_menu() {
 }
 
 /**
+ * Implements hook_file_download().
+ *
+ * Ensure that image block images are always downloadable.
+ * We may want to restrict this in the future.
+ */
+function imageblock_file_download($uri) {
+  if (strpos(file_uri_target($uri), variable_get('imageblock_image_path', 'imageblock')) === 0) {
+    $info = image_get_info($uri);
+    return array('Content-Type' => $info['mime_type']);
+  }
+}
+
+/**
  * Implements hook_block_info().
  */
 function imageblock_block_info() {
