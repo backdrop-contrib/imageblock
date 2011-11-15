@@ -298,7 +298,7 @@ function template_preprocess_imageblock_content(&$variables) {
   if (!empty($block->fid)) {
     $file = file_load($block->fid);
     if (!empty($file->fid)) {
-      $attributes = array('class' => 'imageblock-image');
+      $attributes = array('class' => array('imageblock-image'));
       $variables['path'] = $file->uri;
       $variables['attributes'] = $attributes;
       if (module_exists('image') && !empty($data['imageblock_imagecache']) && $preset = image_style_load($data['imageblock_imagecache'])) {
@@ -308,7 +308,7 @@ function template_preprocess_imageblock_content(&$variables) {
         $variables['image'] = theme('image', $variables);
       }
       if (!empty($data['imageblock_link'])) {
-        $attributes = array('class' => 'imageblock-link');
+        $attributes = array('class' => array('imageblock-link'));
         if (!empty($data['imageblock_link_target'])) {
           $attributes['target'] = $data['imageblock_link_target'];
         }
