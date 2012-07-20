@@ -100,6 +100,12 @@ function imageblock_block_save($delta = '', $edit = array()) {
   if (!empty($edit['imageblock_imagecache'])) {
     $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
   }
+  if (!empty($edit['imageblock_alt'])) {
+    $data['imageblock_alt'] = $edit['imageblock_alt'];
+  }
+  if (!empty($edit['imageblock_title'])) {
+    $data['imageblock_title'] = $edit['imageblock_title'];
+  }
   if (!empty($edit['imageblock_link'])) {
     $data['imageblock_link'] = $edit['imageblock_link'];
   }
@@ -192,7 +198,7 @@ function imageblock_configure_form(&$form, $block = NULL) {
         '#type' => 'item',
         '#title' => t('Image'),
         '#markup' => $file->filename,
-        '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.6 : 0,
+        '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.8 : 0,
       );
     }
   }
@@ -207,7 +213,23 @@ function imageblock_configure_form(&$form, $block = NULL) {
     '#title' => $title,
     '#description' => $description,
     '#size' => 40,
+    '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.7 : 0,
+  );
+  $form['imageblock_alt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Alternate text'),
+    '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
+    '#size' => 40,
+    '#default_value' => isset($data['imageblock_alt']) ? $data['imageblock_alt'] : '',
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.5 : 0,
+  );
+  $form['imageblock_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
+    '#size' => 40,
+    '#default_value' => isset($data['imageblock_title']) ? $data['imageblock_title'] : '',
+    '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.4 : 0,
   );
   $form['imageblock_link'] = array(
     '#type' => 'textfield',
@@ -242,7 +264,7 @@ function imageblock_configure_form(&$form, $block = NULL) {
         '#title' => t('Image style'),
         '#options' => array('' => t('<none>')) + $options,
         '#default_value' => isset($data['imageblock_imagecache']) ? $data['imageblock_imagecache'] : '',
-        '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.4 : 0,
+        '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.6 : 0,
       );
     }
   }
@@ -301,6 +323,12 @@ function template_preprocess_imageblock_content(&$variables) {
       $attributes = array('class' => array('imageblock-image'));
       $variables['path'] = $file->uri;
       $variables['attributes'] = $attributes;
+      if (!empty($data['imageblock_alt'])) {
+        $variables['alt'] = $data['imageblock_alt'];
+      }
+      if (!empty($data['imageblock_title'])) {
+        $variables['title'] = $data['imageblock_title'];
+      }
       if (module_exists('image') && !empty($data['imageblock_imagecache']) && $preset = image_style_load($data['imageblock_imagecache'])) {
         $variables['image'] = theme('image_style', $variables + array('style_name' => $preset['name']));
       }
@@ -319,3 +347,4 @@ function template_preprocess_imageblock_content(&$variables) {
   
   $variables['content'] = check_markup($block->body, $block->format, '', TRUE);
 }
+
