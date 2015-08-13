@@ -274,10 +274,12 @@ function imageblock_configure_form(&$form, $block = NULL) {
 function imageblock_configure_form_validate($form, &$form_state) {
   // TODO: make these settings, make this work
   // Check if already exists this block description to prevent a PDO exception.
-  $info = $form_state['values']['info'];
-  $duplicate_desc = db_query('SELECT count(info) FROM {imageblock} WHERE info = :info',array(':info'=>$info))->fetchField();
-  if ($duplicate_desc) {
-    form_set_error('imageblock_duplicate', t("Failed to create block. A block with this description already exists. Please edit your block description and try again."));
+  if($form['#form_id'] == 'imageblock_add_block_form') {
+    $info = $form_state['values']['info'];
+    $duplicate_desc = db_query('SELECT count(info) FROM {imageblock} WHERE info = :info',array(':info'=>$info))->fetchField();
+    if ($duplicate_desc) {
+      form_set_error('imageblock_duplicate', t("Failed to create block. A block with this description already exists. Please edit your block description and try again."));
+    }
   }
   $validators['file_validate_is_image'] = array();
   if ($max = variable_get('imageblock_max_file_size', 0)) {
