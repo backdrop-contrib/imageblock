@@ -113,6 +113,9 @@ function imageblock_block_save($delta = '', $edit = array()) {
   if (!empty($edit['imageblock_link_target'])) {
     $data['imageblock_link_target'] = $edit['imageblock_link_target'];
   }
+  if (!empty($edit['imageblock_nofollow'])) {
+    $data['imageblock_nofollow'] = $edit['imageblock_nofollow'];
+  }
   
   $old_file = imageblock_get_file($delta);
   if (!empty($edit['imageblock_file'])) {
@@ -254,6 +257,14 @@ function imageblock_configure_form(&$form, $block = NULL) {
     '#default_value' => isset($data['imageblock_link_target']) ? $data['imageblock_link_target'] : '_self',
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.2 : 0,
   );
+  $form['imageblock_nofollow'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('NoFollow option'),
+    '#description' => t('Mark this item if you want add rel=nofollow to your link.</br> Links to an unendorsed document, like a paid link.(nofollow is '
+        . 'used by Google, to specify that the Google search spider should not follow that link)'),
+    '#default_value' => isset($data['imageblock_nofollow']) ? $data['imageblock_nofollow'] : '0',
+    '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.1 : 0,
+  );
   
   if (module_exists('image')) {
     $options = array();
@@ -349,6 +360,9 @@ function template_preprocess_imageblock_content(&$variables) {
         $attributes = array('class' => array('imageblock-link'));
         if (!empty($data['imageblock_link_target'])) {
           $attributes['target'] = $data['imageblock_link_target'];
+        }
+        if(!empty($data['imageblock_nofollow']) && $data['imageblock_nofollow']) {
+          $attributes['rel'] = 'nofollow';
         }
         $variables['image'] = l($variables['image'], $data['imageblock_link'], array('html' => TRUE, 'attributes' => $attributes));
       }
