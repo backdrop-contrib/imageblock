@@ -237,6 +237,7 @@ function imageblock_configure_form(&$form, $block = NULL) {
     '#title' => t('Link'),
     '#description' => t('Leave empty for no link.'),
     '#size' => 40,
+    '#maxlength' => 2083,
     '#default_value' => isset($data['imageblock_link']) ? $data['imageblock_link'] : '',
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.3 : 0,
   );
