@@ -374,7 +374,11 @@ function template_preprocess_imageblock_content(&$variables) {
       }
     }
   }
-  
+  if (isset($block) && is_object($block)) {
   $variables['content'] = check_markup($block->body, $block->format, '', TRUE);
+  }
+  else {
+    $variables['content'] = '';
+  }
 }
 
