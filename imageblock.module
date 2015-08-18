@@ -98,51 +98,59 @@ function imageblock_block_configure($delta = '') {
  */
 function imageblock_block_save($delta = '', $edit = array()) {
   $data = array();
-  if (!empty($edit['imageblock_imagecache'])) {
-    $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
-  }
-  if (!empty($edit['imageblock_alt'])) {
-    $data['imageblock_alt'] = $edit['imageblock_alt'];
-  }
-  if (!empty($edit['imageblock_title'])) {
-    $data['imageblock_title'] = $edit['imageblock_title'];
-  }
-  if (!empty($edit['imageblock_link'])) {
-    $data['imageblock_link'] = $edit['imageblock_link'];
-  }
-  if (!empty($edit['imageblock_link_target'])) {
-    $data['imageblock_link_target'] = $edit['imageblock_link_target'];
-  }
-  if (!empty($edit['imageblock_nofollow'])) {
-    $data['imageblock_nofollow'] = $edit['imageblock_nofollow'];
-  }
-  
-  $old_file = imageblock_get_file($delta);
-  if (!empty($edit['imageblock_file'])) {
-    $file = $edit['imageblock_file'];
-    // If the user uploaded a file, save it to a permanent location.
-    if (!empty($file->fid)) {
-      // If there is an old file, delete it.
-      if (!empty($old_file->fid)) {
-        file_usage_delete($old_file, 'imageblock', 'imageblock', $delta);
-        file_delete($old_file);
-      }
-      
-      $directory =  file_default_scheme() . '://' . variable_get('imageblock_image_path', 'imageblock');
-      
-      // Prepare the directory.
-      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-      $destination = file_stream_wrapper_uri_normalize($directory . "/$file->filename");
-
-      // Move the temporary file into the final location.
-      if ($file = file_move($file, $destination, FILE_EXISTS_RENAME)) {
-        $file->status = FILE_STATUS_PERMANENT;
-        file_save($file);
-        file_usage_add($file, 'imageblock', 'imageblock', $delta);
+  if (!empty($delta) && $delta !='') {
+    if (!empty($edit['imageblock_imagecache'])) {
+      $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
+    }
+    if (!empty($edit['imageblock_alt'])) {
+      $data['imageblock_alt'] = $edit['imageblock_alt'];
+    }
+    if (!empty($edit['imageblock_title'])) {
+      $data['imageblock_title'] = $edit['imageblock_title'];
+    }
+    if (!empty($edit['imageblock_link'])) {
+      $data['imageblock_link'] = $edit['imageblock_link'];
+    }
+    if (!empty($edit['imageblock_link_target'])) {
+      $data['imageblock_link_target'] = $edit['imageblock_link_target'];
+    }
+    if (!empty($edit['imageblock_nofollow'])) {
+      $data['imageblock_nofollow'] = $edit['imageblock_nofollow'];
+    }
+    if (!empty($edit['body']) && !empty($edit['body']['value'])) {
+      $body = $edit['body'];
+    }
+    else {
+      $body = array(
+        'value' => '',
+        'format' => '',
+      );
+    }
+    $old_file = imageblock_get_file($delta);
+    if (!empty($edit['imageblock_file'])) {
+      $file = $edit['imageblock_file'];
+      // If the user uploaded a file, save it to a permanent location.
+      if (!empty($file->fid)) {
+        // If there is an old file, delete it.
+        if (!empty($old_file->fid)) {
+          file_usage_delete($old_file, 'imageblock', 'imageblock', $delta);
+          file_delete($old_file);
+        }
+        
+        $directory =  file_default_scheme() . '://' . variable_get('imageblock_image_path', 'imageblock');
+        
+        // Prepare the directory.
+        file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+        $destination = file_stream_wrapper_uri_normalize($directory . "/$file->filename");
+        // Move the temporary file into the final location.
+        if ($file = file_move($file, $destination, FILE_EXISTS_RENAME)) {
+          $file->status = FILE_STATUS_PERMANENT;
+          file_save($file);
+          file_usage_add($file, 'imageblock', 'imageblock', $delta);
+        }
       }
     }
   }
-  
   db_update('imageblock')
     ->fields(array(
       'body' => $edit['body']['value'],
@@ -153,8 +161,6 @@ function imageblock_block_save($delta = '', $edit = array()) {
     ))
     ->condition('bid', $delta)
     ->execute();
-
-  return TRUE;
 }
 
 /**
