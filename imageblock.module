@@ -219,11 +219,12 @@ function imageblock_configure_form(&$form, $block = NULL) {
   $data = !empty($block['data']) ? unserialize($block['data']) : array();
   
   $form['imageblock'] = array(
-    '#type' => 'file',
+    '#type' => 'managed_file',
     '#title' => $title,
     '#description' => $description,
     '#size' => 40,
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.7 : 0,
+    '#upload_location' => 'public://',
   );
   $form['imageblock_alt'] = array(
     '#type' => 'textfield',
