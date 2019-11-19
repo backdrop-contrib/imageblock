@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @file imageblock.install
+ * @file
  * Contains install and update functions for Image Block module.
  */
 
