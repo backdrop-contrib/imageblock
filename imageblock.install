@@ -9,8 +9,9 @@
  * Implements hook_uninstall().
  */
 function imageblock_uninstall() {
-  $config = 'imageblock.settings';
-  $config->delete('imageblock.settings');
+  config_clear('imageblock.settings', 'imageblock_max_file_size');
+  config_clear('imageblock.settings', 'imageblock_max_dimensions');
+  config_clear('imageblock.settings', 'imageblock_image_path');
   // FIXME delete all image blocks, too?
 }
 

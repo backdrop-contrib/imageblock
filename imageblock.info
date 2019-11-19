@@ -3,6 +3,6 @@ description = Provides a file field in block configuration form for displaying a
 backdrop = 1.x
 type = module
 package = User interface
-dependencies[] = block
+dependencies[] = image
 configure = admin/structure/block/imageblock_configure
 stylesheets[all][] = css/imageblock.css
