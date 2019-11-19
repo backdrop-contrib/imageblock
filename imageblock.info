@@ -1,6 +1,7 @@
 name = Image Block
 description = Provides a file field in block configuration form for displaying an image in a block.
-core = 7.x
+backdrop = 1.x
+type = module
 package = User interface
 dependencies[] = block
 configure = admin/structure/block/imageblock_configure

@@ -61,7 +61,7 @@ function imageblock_schema() {
     ),
     'primary key' => array('bid'),
   );
-  
+
   return $schema;
 }
 
@@ -69,7 +69,27 @@ function imageblock_schema() {
  * Implements hook_uninstall().
  */
 function imageblock_uninstall() {
-  variable_del('imageblock_max_file_size');
-  variable_del('imageblock_max_dimensions');
-  variable_del('imageblock_image_path');
+  config_clear('imageblock.settings', 'imageblock_max_file_size');
+  config_clear('imageblock.settings', 'imageblock_max_dimensions');
+  config_clear('imageblock.settings', 'imageblock_image_path');
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function imageblock_update_1000() {
+  $config = config('imageblock.settings');
+  $config->set('imageblock_image_path', update_variable_get('imageblock_image_path', 'imageblock'));
+  $config->set('imageblock_max_file_size', update_variable_get('imageblock_max_file_size', 'novalue'));
+  $config->set('imageblock_max_dimensions', update_variable_get('imageblock_max_dimensions', 'novalue'));
+  update_variable_del('imageblock_image_path');
+  update_variable_del('imageblock_max_file_size');
+  update_variable_del('imageblock_max_dimensions');
+}
+
+/**
+ * Implements hook_install().
+ */
+function imageblock_install() {
+  // Dynamically generated variable data was detected.
 }

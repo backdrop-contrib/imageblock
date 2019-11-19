@@ -1,30 +1,40 @@
 <?php
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function imageblock_admin_settings_form() {
+  $config = config('imageblock.settings');
+  $form['#config'] = 'imageblock.settings';
   $form['imageblock_image_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Image block image directory'),
     '#description' => t('Subdirectory in the file upload directory where images will be stored.'),
-    '#default_value' => variable_get('imageblock_image_path', 'imageblock'),
+    '#default_value' => $config->get('imageblock_image_path'),
     '#maxlength' => 255,
   );
   $form['imageblock_max_file_size'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum file size'),
     '#description' => t('Specify the size limit that applies to each image. Enter a value like "512" (bytes), "80K" (kilobytes) or "50M" (megabytes) in order to restrict the allowed file size. If you leave this empty the file sizes will be limited only by PHP\'s maximum post and file upload sizes (current limit <strong>%limit</strong>).', array('%limit' => format_size(file_upload_max_size()))),
-    '#default_value' => variable_get('imageblock_max_file_size', 0),
+    '#default_value' => $config->get('imageblock_max_file_size'),
     '#maxlength' => 15,
   );
   $form['imageblock_max_dimensions'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum dimensions'),
     '#description' => t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
-    '#default_value' => variable_get('imageblock_max_dimensions', 0),
+    '#default_value' => $config->get('imageblock_max_dimensions'),
     '#maxlength' => 15,
   );
   return system_settings_form($form);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function imageblock_admin_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   foreach (array('imageblock_max_file_size') as $size) {
@@ -66,10 +76,10 @@ function imageblock_add_block_form() {
 function imageblock_add_block_form_submit($form, &$form_state) {
   $delta = db_insert('imageblock')
     ->fields(array(
-      'body' => $form_state['values']['body']['value'],
-      'info' => $form_state['values']['info'],
-      'format' => $form_state['values']['body']['format'],
-    ))
+    'body' => $form_state['values']['body']['value'],
+    'info' => $form_state['values']['info'],
+    'format' => $form_state['values']['body']['format'],
+  ))
     ->execute();
   // Store block delta to allow other modules to work with new block.
   $form_state['values']['delta'] = $delta;
@@ -87,7 +97,7 @@ function imageblock_add_block_form_submit($form, &$form_state) {
         'status' => 0,
         'weight' => 0,
         'delta' => $delta,
-        'cache' => DRUPAL_NO_CACHE,
+        'cache' => BACKDROP_NO_CACHE,
       ));
     }
   }
@@ -108,16 +118,16 @@ function imageblock_add_block_form_submit($form, &$form_state) {
     db_merge('block')
       ->key(array('theme' => $theme, 'delta' => $delta, 'module' => $form_state['values']['module']))
       ->fields(array(
-        'region' => ($region == BLOCK_REGION_NONE ? '' : $region),
-        'pages' => trim($form_state['values']['pages']),
-        'status' => (int) ($region != BLOCK_REGION_NONE),
-      ))
+      'region' => ($region == BLOCK_REGION_NONE ? '' : $region),
+      'pages' => trim($form_state['values']['pages']),
+      'status' => (int) ($region != BLOCK_REGION_NONE),
+    ))
       ->execute();
   }
 
   imageblock_block_save($delta, $form_state['values']);
 
-  drupal_set_message(t('The image block has been created.'));
+  backdrop_set_message(t('The image block has been created.'));
   cache_clear_all();
   $form_state['redirect'] = 'admin/structure/block';
 }
@@ -133,8 +143,14 @@ function imageblock_add_block_form_submit($form, &$form_state) {
 function imageblock_custom_block_delete($form, &$form_state, $delta) {
   $block = block_load('imageblock', $delta);
   $custom_block = block_imageblock_get($block->delta);
-  $form['info'] = array('#type' => 'hidden', '#value' => $custom_block['info'] ? $custom_block['info'] : $custom_block['title']);
-  $form['bid'] = array('#type' => 'hidden', '#value' => $block->delta);
+  $form['info'] = array(
+    '#type' => 'hidden',
+    '#value' => $custom_block['info'] ? $custom_block['info'] : $custom_block['title'],
+  );
+  $form['bid'] = array(
+    '#type' => 'hidden',
+    '#value' => $block->delta,
+  );
 
   return confirm_form($form, t('Are you sure you want to delete the image block %name?', array('%name' => $custom_block['info'])), 'admin/structure/block', '', t('Delete'), t('Cancel'));
 }
@@ -151,7 +167,7 @@ function imageblock_custom_block_delete_submit($form, &$form_state) {
     file_usage_delete($file, 'imageblock', 'imageblock', $form_state['values']['bid']);
     file_delete($file);
   }
-  
+
   db_delete('imageblock')
     ->condition('bid', $form_state['values']['bid'])
     ->execute();
@@ -163,8 +179,8 @@ function imageblock_custom_block_delete_submit($form, &$form_state) {
     ->condition('module', 'imageblock')
     ->condition('delta', $form_state['values']['bid'])
     ->execute();
-  
-  drupal_set_message(t('The image block %name has been removed.', array('%name' => $form_state['values']['info'])));
+
+  backdrop_set_message(t('The image block %name has been removed.', array('%name' => $form_state['values']['info'])));
   cache_clear_all();
   $form_state['redirect'] = 'admin/structure/block';
   return;

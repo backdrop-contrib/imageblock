@@ -3,12 +3,12 @@
 /*Only a comment*/
 /**
  * @file imageblock.module
- * Primarily Drupal hooks.
+ * Primarily Backdrop hooks.
  */
 
 
 /**
- * Implementation of hook_theme()
+ * Implements hook_theme().
  */
 function imageblock_theme() {
   return array(
@@ -25,7 +25,7 @@ function imageblock_theme() {
 function imageblock_menu() {
   $items['admin/structure/block/imageblock_add'] = array(
     'title' => 'Add image block',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('imageblock_add_block_form'),
     'access arguments' => array('administer blocks'),
     'file' => 'imageblock.admin.inc',
@@ -34,14 +34,14 @@ function imageblock_menu() {
   $items['admin/structure/block/imageblock_configure'] = array(
     'title' => 'Image block settings',
     'description' => 'Configure Image block settings.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('imageblock_admin_settings_form'),
     'access arguments' => array('administer site configuration'),
     'file' => 'imageblock.admin.inc',
   );
   $items['admin/structure/block/manage/imageblock/%/delete'] = array(
     'title' => 'Delete block',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('imageblock_custom_block_delete', 5),
     'access arguments' => array('administer blocks'),
     'type' => MENU_CALLBACK,
@@ -51,13 +51,23 @@ function imageblock_menu() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function imageblock_config_info() {
+  $prefixes['imageblock.settings'] = array(
+    'label' => t('Module name settings'),
+    'group' => t('Configuration'),
+  );
+}
+
+/**
  * Implements hook_file_download().
  *
  * Ensure that image block images are always downloadable.
  * We may want to restrict this in the future.
  */
 function imageblock_file_download($uri) {
-  if (strpos(file_uri_target($uri), variable_get('imageblock_image_path', 'imageblock')) === 0) {
+  if (strpos(file_uri_target($uri), config_get('imageblock.settings', 'imageblock_image_path')) === 0) {
     $info = image_get_info($uri);
     return array('Content-Type' => $info['mime_type']);
   }
@@ -73,7 +83,7 @@ function imageblock_block_info() {
   foreach ($result as $block) {
     $blocks[$block->bid]['info'] = $block->info;
     // Not worth caching.
-    $blocks[$block->bid]['cache'] = DRUPAL_NO_CACHE;
+    $blocks[$block->bid]['cache'] = BACKDROP_NO_CACHE;
   }
   return $blocks;
 }
@@ -98,7 +108,7 @@ function imageblock_block_configure($delta = '') {
  */
 function imageblock_block_save($delta = '', $edit = array()) {
   $data = array();
-  if (!empty($delta) && $delta !='') {
+  if (!empty($delta) && $delta != '') {
     if (!empty($edit['imageblock_imagecache'])) {
       $data['imageblock_imagecache'] = $edit['imageblock_imagecache'];
     }
@@ -136,9 +146,9 @@ function imageblock_block_save($delta = '', $edit = array()) {
           file_usage_delete($old_file, 'imageblock', 'imageblock', $delta);
           file_delete($old_file);
         }
-        
-        $directory =  file_default_scheme() . '://' . variable_get('imageblock_image_path', 'imageblock');
-        
+
+        $directory =  file_default_scheme() . '://' . config_get('imageblock.settings', 'imageblock_image_path');
+
         // Prepare the directory.
         file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
         $destination = file_stream_wrapper_uri_normalize($directory . "/$file->filename");
@@ -153,12 +163,12 @@ function imageblock_block_save($delta = '', $edit = array()) {
   }
   db_update('imageblock')
     ->fields(array(
-      'body' => $edit['body']['value'],
-      'info' => $edit['info'],
-      'format' => $edit['body']['format'],
-      'fid' => !empty($file) ? $file->fid : (!empty($old_file) ? $old_file->fid : 0),
-      'data' => serialize($data),
-    ))
+    'body' => $edit['body']['value'],
+    'info' => $edit['info'],
+    'format' => $edit['body']['format'],
+    'fid' => !empty($file) ? $file->fid : (!empty($old_file) ? $old_file->fid : 0),
+    'data' => serialize($data),
+  ))
     ->condition('bid', $delta)
     ->execute();
 }
@@ -190,12 +200,16 @@ function imageblock_form_alter(&$form, &$form_state, $form_id) {
           '#type' => 'link',
           '#title' => t('delete'),
           '#href' => 'admin/structure/block/manage/imageblock/' . $element['delta']['#value'] . '/delete',
-       );
+        );
       }
     }
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function imageblock_configure_form(&$form, $block = NULL) {
   $title = t('Image');
   $description = '';
@@ -212,12 +226,12 @@ function imageblock_configure_form(&$form, $block = NULL) {
       );
     }
   }
-  
+
   // Do not require body as we can have an image as the body.
   $form['body_field']['body']['#required'] = FALSE;
-  
+
   $data = !empty($block['data']) ? unserialize($block['data']) : array();
-  
+
   $form['imageblock'] = array(
     '#type' => 'managed_file',
     '#title' => $title,
@@ -272,7 +286,7 @@ function imageblock_configure_form(&$form, $block = NULL) {
     '#default_value' => isset($data['imageblock_nofollow']) ? $data['imageblock_nofollow'] : '0',
     '#weight' => isset($form['body_field']['#weight']) ? $form['body_field']['#weight'] - 0.1 : 0,
   );
-  
+
   if (module_exists('image')) {
     $options = array();
     foreach (image_styles() as $key => $preset) {
@@ -290,28 +304,33 @@ function imageblock_configure_form(&$form, $block = NULL) {
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function imageblock_configure_form_validate($form, &$form_state) {
+  $config = config('imageblock.settings');
   // TODO: make these settings, make this work
   // Check if already exists this block description to prevent a PDO exception.
-  if($form['#form_id'] == 'imageblock_add_block_form') {
+  if ($form['#form_id'] == 'imageblock_add_block_form') {
     $info = $form_state['values']['info'];
-    $duplicate_desc = db_query('SELECT count(info) FROM {imageblock} WHERE info = :info',array(':info'=>$info))->fetchField();
+    $duplicate_desc = db_query('SELECT count(info) FROM {imageblock} WHERE info = :info', array(':info' => $info))->fetchField();
     if ($duplicate_desc) {
       form_set_error('imageblock_duplicate', t("Failed to create block. A block with this description already exists. Please edit your block description and try again."));
     }
   }
   $validators['file_validate_is_image'] = array();
-  if ($max = variable_get('imageblock_max_file_size', 0)) {
+  if ($max = $config->get('imageblock_max_file_size')) {
     $validators['file_validate_size'] = array(parse_size($max), 0);
   }
-  if ($max = variable_get('imageblock_max_dimensions', 0)) {
+  if ($max = $config->get('imageblock_max_dimensions')) {
     $validators['file_validate_image_resolution'] = array($max);
   }
 
   // Save new file uploads.
   $file = file_save_upload('imageblock', $validators);
   if ($file === FALSE) {
-    form_set_error('imageblock', t("Failed to upload the image; the %directory directory doesn't exist or is not writable.", array('%directory' => variable_get('imageblock_image_path', 'imageblock'))));
+    form_set_error('imageblock', t("Failed to upload the image; the %directory directory doesn't exist or is not writable.", array('%directory' => $config->get('imageblock_image_path'))));
   }
   elseif ($file !== NULL) {
     $form_state['values']['imageblock_file'] = $file;
@@ -368,7 +387,7 @@ function template_preprocess_imageblock_content(&$variables) {
         if (!empty($data['imageblock_link_target'])) {
           $attributes['target'] = $data['imageblock_link_target'];
         }
-        if(!empty($data['imageblock_nofollow']) && $data['imageblock_nofollow']) {
+        if (!empty($data['imageblock_nofollow']) && $data['imageblock_nofollow']) {
           $attributes['rel'] = 'nofollow';
         }
         $variables['image'] = l($variables['image'], $data['imageblock_link'], array('html' => TRUE, 'attributes' => $attributes));
@@ -376,7 +395,7 @@ function template_preprocess_imageblock_content(&$variables) {
     }
   }
   if (isset($block) && is_object($block)) {
-  $variables['content'] = check_markup($block->body, $block->format, '', TRUE);
+    $variables['content'] = check_markup($block->body, $block->format, '', TRUE);
   }
   else {
     $variables['content'] = '';
