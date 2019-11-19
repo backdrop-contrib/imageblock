@@ -5,3 +5,4 @@ type = module
 package = User interface
 dependencies[] = block
 configure = admin/structure/block/imageblock_configure
+stylesheets[all][] = css/imageblock.css

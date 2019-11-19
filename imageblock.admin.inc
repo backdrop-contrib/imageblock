@@ -1,8 +1,12 @@
 <?php
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * @file
+ * Functions regarding administration of Image blocks.
+ */
+
+/**
+ * Form handler for the site wide Image block admin settings.
  */
 function imageblock_admin_settings_form() {
   $config = config('imageblock.settings');
@@ -32,8 +36,7 @@ function imageblock_admin_settings_form() {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Validation handler for the site wide Image block admin settings.
  */
 function imageblock_admin_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
@@ -50,138 +53,105 @@ function imageblock_admin_settings_form_validate($form, &$form_state) {
 }
 
 /**
- * Form builder for the add image block form.
- *
- * @see block_add_block_form_validate()
- * @see imageblock_add_block_form_submit()
- * @ingroup forms
+ * Form handler to delete an Image block.
  */
-function imageblock_add_block_form() {
-  module_load_include('inc', 'block', 'block.admin');
-  $form = array();
-  $form = block_admin_configure($form, $form_state, 'imageblock', NULL);
-  $form['#validate'][] = 'block_add_block_form_validate';
-  $form['#validate'][] = 'imageblock_configure_form_validate';
-  return $form;
+function imageblock_block_delete($form, &$form_state, $machine_name) {
+  $imageblock = config_get('imageblock.block.' . $machine_name);
+  $form['machine_name'] = array(
+    '#type' => 'hidden',
+    '#value' => $imageblock['machine_name'],
+  );
+  $form['image'] = array(
+    '#type' => 'hidden',
+    '#value' => $imageblock['image'],
+  );
+  $confirm_message = t('Are you sure you want to delete the block %name?', array('%name' => $imageblock['label']));
+  return confirm_form($form, $confirm_message, 'admin/structure/imageblock/list', '', t('Delete'), t('Cancel'));
 }
 
 /**
- * Form submission handler for the add image block form.
- *
- * Saves the new custom image block.
- *
- * @see imageblock_add_block_form()
- * @see block_add_block_form_validate()
+ * Form submission handler to delete an Image block.
  */
-function imageblock_add_block_form_submit($form, &$form_state) {
-  $delta = db_insert('imageblock')
-    ->fields(array(
-    'body' => $form_state['values']['body']['value'],
-    'info' => $form_state['values']['info'],
-    'format' => $form_state['values']['body']['format'],
-  ))
-    ->execute();
-  // Store block delta to allow other modules to work with new block.
-  $form_state['values']['delta'] = $delta;
-
-  $query = db_insert('block')->fields(array('visibility', 'pages', 'custom', 'title', 'module', 'theme', 'status', 'weight', 'delta', 'cache'));
-  foreach (list_themes() as $key => $theme) {
-    if ($theme->status) {
-      $query->values(array(
-        'visibility' => (int) $form_state['values']['visibility'],
-        'pages' => trim($form_state['values']['pages']),
-        'custom' => (int) $form_state['values']['custom'],
-        'title' => $form_state['values']['title'],
-        'module' => $form_state['values']['module'],
-        'theme' => $theme->name,
-        'status' => 0,
-        'weight' => 0,
-        'delta' => $delta,
-        'cache' => BACKDROP_NO_CACHE,
-      ));
+function imageblock_block_delete_submit($form, &$form_state) {
+  if (!empty($form_state['values']['image'])) {
+    $file = file_load($form_state['values']['image']);
+    if ($file) {
+      file_usage_delete($file, 'imageblock');
     }
   }
-  $query->execute();
-
-  $query = db_insert('block_role')->fields(array('rid', 'module', 'delta'));
-  foreach (array_filter($form_state['values']['roles']) as $rid) {
-    $query->values(array(
-      'rid' => $rid,
-      'module' => $form_state['values']['module'],
-      'delta' => $delta,
-    ));
-  }
-  $query->execute();
-
-  // Store regions per theme for this block
-  foreach ($form_state['values']['regions'] as $theme => $region) {
-    db_merge('block')
-      ->key(array('theme' => $theme, 'delta' => $delta, 'module' => $form_state['values']['module']))
-      ->fields(array(
-      'region' => ($region == BLOCK_REGION_NONE ? '' : $region),
-      'pages' => trim($form_state['values']['pages']),
-      'status' => (int) ($region != BLOCK_REGION_NONE),
-    ))
-      ->execute();
-  }
-
-  imageblock_block_save($delta, $form_state['values']);
-
-  backdrop_set_message(t('The image block has been created.'));
-  cache_clear_all();
-  $form_state['redirect'] = 'admin/structure/block';
+  config('imageblock.block.' . $form_state['values']['machine_name'])->delete();
+  backdrop_set_message(t('The Image block %name has been removed.', array('%name' => $form_state['values']['machine_name'])));
+  $form_state['redirect'] = 'admin/structure/imageblock/list';
 }
 
 /**
- * Form builder for the image block deletion form.
- *
- * @param $delta
- *   The unique ID of the block within the context of $module.
- *
- * @see imageblock_custom_block_delete_submit()
+ * Callback to provide a listing page with all image blocks.
  */
-function imageblock_custom_block_delete($form, &$form_state, $delta) {
-  $block = block_load('imageblock', $delta);
-  $custom_block = block_imageblock_get($block->delta);
-  $form['info'] = array(
-    '#type' => 'hidden',
-    '#value' => $custom_block['info'] ? $custom_block['info'] : $custom_block['title'],
-  );
-  $form['bid'] = array(
-    '#type' => 'hidden',
-    '#value' => $block->delta,
-  );
-
-  return confirm_form($form, t('Are you sure you want to delete the image block %name?', array('%name' => $custom_block['info'])), 'admin/structure/block', '', t('Delete'), t('Cancel'));
-}
-
-/**
- * Form submission handler for the image block deletion form.
- *
- * @see imageblock_custom_block_delete()
- */
-function imageblock_custom_block_delete_submit($form, &$form_state) {
-  // If there is a file, delete it.
-  $file = imageblock_get_file($form_state['values']['bid']);
-  if (!empty($file->fid)) {
-    file_usage_delete($file, 'imageblock', 'imageblock', $form_state['values']['bid']);
-    file_delete($file);
+function imageblock_list() {
+  // FIXME experimental. Could be very slow with many Image blocks.
+  $header = array('Admin label', 'Image', 'Text preview', 'Used in', 'Action');
+  $rows = array();
+  $config_names = config_get_names_with_prefix('imageblock.block.');
+  foreach ($config_names as $config_name) {
+    $block = config_get($config_name);
+    $preview_text = 'No text set';
+    if (!empty($block['content'])) {
+      $plain = strip_tags($block['content']);
+      $preview_text = substr($plain, 0, 30);
+    }
+    $image = '-';
+    if (!empty($block['image'])) {
+      $file = file_load($block['image']);
+      if ($file) {
+        $variables = array(
+          'style_name' => 'thumbnail',
+          'uri' => $file->uri,
+          'width' => $file->width,
+          'height' => $file->height,
+          'alt' => '',
+          'attributes' => array(),
+        );
+        $image = theme('image_style', $variables);
+      }
+    }
+    $used_in = '-';
+    module_load_include('inc', 'layout', 'layout.admin');
+    $usage = layout_get_block_usage();
+    if (isset($usage['imageblock'])) {
+      $delta = $usage['imageblock'];
+      foreach ($delta as $layouts) {
+        foreach ($layouts as $layout_name => $layout) {
+          foreach ($layout as $region_name => $region) {
+            foreach ($region as $imageblock) {
+              if ($imageblock->settings['machine_name'] == $block['machine_name']) {
+                $admin_path = 'admin/structure/layouts/manage/' . $layout_name;
+                $options = array(
+                  'fragment' => 'layout-editor-region-' . $region_name,
+                );
+                $linktext = $imageblock->layout_title . ' / ' . $region_name;
+                $used_in = l($linktext, $admin_path, $options);
+              }
+            }
+          }
+        }
+      }
+    }
+    if ($used_in == '-') {
+      $path = 'admin/structure/imageblock/' . $block['machine_name'] . '/delete';
+      $action = l(t('Delete'), $path);
+    }
+    else {
+      $action = '-';
+    }
+    $rows[] = array(
+      $block['label'],
+      $image,
+      $preview_text,
+      $used_in,
+      $action,
+    );
   }
-
-  db_delete('imageblock')
-    ->condition('bid', $form_state['values']['bid'])
-    ->execute();
-  db_delete('block')
-    ->condition('module', 'imageblock')
-    ->condition('delta', $form_state['values']['bid'])
-    ->execute();
-  db_delete('block_role')
-    ->condition('module', 'imageblock')
-    ->condition('delta', $form_state['values']['bid'])
-    ->execute();
-
-  backdrop_set_message(t('The image block %name has been removed.', array('%name' => $form_state['values']['info'])));
-  cache_clear_all();
-  $form_state['redirect'] = 'admin/structure/block';
-  return;
+  $markup = '<p>' . t('Please note: you can only delete Image blocks not in use in any layout.') . '</p>';
+  $markup .= theme('table', array('header' => $header, 'rows' => $rows));
+  return $markup;
 }

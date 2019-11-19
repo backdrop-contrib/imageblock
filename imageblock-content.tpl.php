@@ -7,20 +7,20 @@
  * Available variables:
  * - $image: Block image.
  * - $content: Block content.
- * - $block: Block object.
+ * - $wrapper_classes: Block content wrapper class(es).
  *
- * @see template_preprocess()
- * @see template_preprocess_imageblock_content()
+ * @see template_preprocess_block()
  */
 ?>
+<div class="<?php print $wrapper_classes;?>">
 <?php if ($image): ?>
   <div class="block-image">
     <?php print $image ?>
   </div>
 <?php endif; ?>
-
 <?php if ($content): ?>
   <div class="block-body">
     <?php print $content ?>
   </div>
 <?php endif; ?>
+</div>

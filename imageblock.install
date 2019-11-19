@@ -6,90 +6,70 @@
  */
 
 /**
- * Implements hook_schema().
- */
-function imageblock_schema() {
-  $schema = array();
-  $schema['imageblock'] = array(
-    'description' => 'Stores contents of custom-made image blocks.',
-    'fields' => array(
-      'bid' => array(
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'description' => "The block's {block}.bid.",
-      ),
-      'body' => array(
-        'type' => 'text',
-        'not null' => FALSE,
-        'size' => 'big',
-        'description' => 'Block contents.',
-        'translatable' => TRUE,
-      ),
-      'info' => array(
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'Block description.',
-      ),
-      'format' => array(
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'description' => 'The {filter_format}.format of the block body.',
-      ),
-      'fid' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => "The File's {files}.fid.",
-      ),
-      'data' => array(
-        'type' => 'text',
-        'not null' => FALSE,
-        'size' => 'big',
-        'description' => 'A serialized array of name value pairs that are related to the block file.',
-      ),
-    ),
-    'unique keys' => array(
-      'info' => array('info'),
-    ),
-    'indexes' => array(
-      'fid' => array('fid'),
-    ),
-    'primary key' => array('bid'),
-  );
-
-  return $schema;
-}
-
-/**
  * Implements hook_uninstall().
  */
 function imageblock_uninstall() {
-  config_clear('imageblock.settings', 'imageblock_max_file_size');
-  config_clear('imageblock.settings', 'imageblock_max_dimensions');
-  config_clear('imageblock.settings', 'imageblock_image_path');
+  $config = 'imageblock.settings';
+  $config->delete('imageblock.settings');
+  // FIXME delete all image blocks, too?
 }
+
+/**
+ * @addtogroup updates-7.x-to-1.x
+ * @{
+ */
 
 /**
  * Implements hook_update_N().
  */
 function imageblock_update_1000() {
   $config = config('imageblock.settings');
-  $config->set('imageblock_image_path', update_variable_get('imageblock_image_path', 'imageblock'));
-  $config->set('imageblock_max_file_size', update_variable_get('imageblock_max_file_size', 'novalue'));
-  $config->set('imageblock_max_dimensions', update_variable_get('imageblock_max_dimensions', 'novalue'));
+  $config->set('imageblock_image_path', update_variable_get('imageblock_image_path', ''));
+  $config->set('imageblock_max_file_size', update_variable_get('imageblock_max_file_size', ''));
+  $config->set('imageblock_max_dimensions', update_variable_get('imageblock_max_dimensions', ''));
   update_variable_del('imageblock_image_path');
   update_variable_del('imageblock_max_file_size');
   update_variable_del('imageblock_max_dimensions');
 }
 
 /**
- * Implements hook_install().
+ * Move individual blocks into config files.
  */
-function imageblock_install() {
-  // Dynamically generated variable data was detected.
+function imageblock_update_1001() {
+  if (!db_table_exists('imageblock')) {
+    return;
+  }
+
+  $blocks = db_query("SELECT * FROM {imageblock}")->fetchAllAssoc('bid');
+  foreach ($blocks as $block) {
+    $block = (array) $block;
+    $clean = preg_replace('/[^a-z0-9_]+/', '_', strtolower(trim($block['info'])));
+    $machine_name = 'bid_' . $block['bid'] . '_' . substr($clean, 0, 20);
+    $settings = unserialize($block['data']);
+    $data = array(
+      'label' => $block['info'],
+      'machine_name' => $machine_name,
+      'title' => '',// FIXME how?
+      'content' => $block['body'],
+      'format' => $block['format'],
+      'image' => $block['fid'],
+      'alt' => isset($settings['imageblock_alt']) ? $settings['imageblock_alt'] : '',
+      'img_title' => isset($settings['imageblock_title']) ? $settings['imageblock_title'] : '',
+      'link' => isset($settings['imageblock_link']) ? $settings['imageblock_link'] : '',
+      'link_target' => isset($settings['imageblock_link_target']) ? $settings['imageblock_link_target'] : '',
+      'nofollow' => 0,
+      'image_style' => isset($settings['imageblock_imagecache']) ? $settings['imageblock_imagecache'] : '',
+      'image_align' => '',
+    );
+    $config = config('imageblock.block.' . $machine_name);
+    $config->setData($data);
+    $config->save();
+  }
+
+  db_drop_table('imageblock');
 }
+
+/**
+ * @} End of "addtogroup updates-7.x-to-1.x"
+ * The next series of updates should start at 2000.
+ */

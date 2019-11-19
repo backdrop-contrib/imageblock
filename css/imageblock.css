@@ -1,0 +1,20 @@
+@media all and (min-width: 720px) {
+  .imageblock-image-left .block-image {
+    float: left;
+    margin: 8px 30px 10px 0;
+  }
+  .imageblock-image-right .block-image {
+    float: right;
+    margin: 8px 0 10px 30px;
+  }
+  .imageblock-image-left .block-image,
+  .imageblock-image-left .block-body {
+    display: table;
+  }
+  .imageblock-image-left .block-body > * {
+    margin-top: 0;
+  }
+}
+.imageblock-image-center .block-image {
+  text-align: center;
+}
