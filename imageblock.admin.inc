@@ -137,8 +137,10 @@ function imageblock_list() {
       }
     }
     if ($used_in == '-') {
-      $path = 'admin/structure/imageblock/' . $block['machine_name'] . '/delete';
-      $action = l(t('Delete'), $path);
+      // $path = 'admin/structure/imageblock/' . $block['machine_name'] . '/delete';
+      // $action = l(t('Delete'), $path);
+      // FIXME need to check parent/child dependencies for cloned blocks.
+      $action = '-';
     }
     else {
       $action = '-';
@@ -151,7 +153,6 @@ function imageblock_list() {
       $action,
     );
   }
-  $markup = '<p>' . t('Please note: you can only delete Image blocks not in use in any layout.') . '</p>';
-  $markup .= theme('table', array('header' => $header, 'rows' => $rows));
+  $markup = theme('table', array('header' => $header, 'rows' => $rows));
   return $markup;
 }
