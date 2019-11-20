@@ -88,14 +88,28 @@ function imageblock_block_delete_submit($form, &$form_state) {
  * Callback to provide a listing page with all image blocks.
  */
 function imageblock_list() {
-  // FIXME experimental. Could be very slow with many Image blocks.
-  $header = array('Admin label', 'Image', 'Text preview', 'Used in', 'Action');
+  backdrop_static_reset('imageblock_layout_usage');
+
+  $header = array('Admin label', 'Image', 'Text preview', 'Required for', 'Action');
   $rows = array();
   $config_names = config_get_names_with_prefix('imageblock.block.');
+  $imageblock_usage = imageblock_layout_usage();
+  $parents = array();
+  foreach ($config_names as $config_name) {
+    $parent = config_get($config_name, 'parent');
+    if ($parent && $parent != 'default') {
+      $parents[] = $parent;
+    }
+  }
+
   foreach ($config_names as $config_name) {
     $block = config_get($config_name);
     $preview_text = 'No text set';
-    if (!empty($block['content'])) {
+    if (!empty($block['title'])) {
+      $plain = strip_tags($block['title']);
+      $preview_text = $plain;
+    }
+    elseif (!empty($block['content'])) {
       $plain = strip_tags($block['content']);
       $preview_text = substr($plain, 0, 30);
     }
@@ -114,7 +128,48 @@ function imageblock_list() {
         $image = theme('image_style', $variables);
       }
     }
-    $used_in = '-';
+    $required_for = '-';
+    if (array_key_exists($block['machine_name'], $imageblock_usage)) {
+      $current_usage = $imageblock_usage[$block['machine_name']];
+      $admin_path = 'admin/structure/layouts/manage/' . $current_usage['layout'];
+      $options = array(
+        'fragment' => 'layout-editor-region-' . $current_usage['region'],
+      );
+      $linktext = $current_usage['layout_title'] . ' / ' . $current_usage['region'];
+      $required_for = l($linktext, $admin_path, $options);
+    }
+    $action = '-';
+    if ($required_for == '-') {
+      if (!in_array($block['machine_name'], $parents)) {
+        $path = 'admin/structure/imageblock/' . $block['machine_name'] . '/delete';
+        $link_options = array('attributes' => array('class' => array('button')));
+        $action = l(t('Delete'), $path, $link_options);
+      }
+      else {
+        $required_for = 'Has dependent block';
+      }
+    }
+    $rows[] = array(
+      $block['label'],
+      $image,
+      $preview_text,
+      $required_for,
+      $action,
+    );
+  }
+  $markup = '<p>' . t('Please note: you can only delete Image blocks not in use in any layout and not parent of a copied block in use.') . '</p>';
+  $markup .= theme('table', array('header' => $header, 'rows' => $rows));
+  return $markup;
+}
+
+/**
+ * Helper function to get all Image block usages in layouts.
+ */
+function imageblock_layout_usage() {
+  $imageblocks_in_use = &backdrop_static(__FUNCTION__);
+
+  if (!isset($imageblocks_in_use)) {
+    $imageblocks_in_use = array();
     module_load_include('inc', 'layout', 'layout.admin');
     $usage = layout_get_block_usage();
     if (isset($usage['imageblock'])) {
@@ -123,36 +178,16 @@ function imageblock_list() {
         foreach ($layouts as $layout_name => $layout) {
           foreach ($layout as $region_name => $region) {
             foreach ($region as $imageblock) {
-              if ($imageblock->settings['machine_name'] == $block['machine_name']) {
-                $admin_path = 'admin/structure/layouts/manage/' . $layout_name;
-                $options = array(
-                  'fragment' => 'layout-editor-region-' . $region_name,
-                );
-                $linktext = $imageblock->layout_title . ' / ' . $region_name;
-                $used_in = l($linktext, $admin_path, $options);
-              }
+              $imageblocks_in_use[$imageblock->settings['machine_name']] = array(
+                'layout' => $layout_name,
+                'layout_title' => $imageblock->layout_title,
+                'region' => $region_name,
+              );
             }
           }
         }
       }
     }
-    if ($used_in == '-') {
-      // $path = 'admin/structure/imageblock/' . $block['machine_name'] . '/delete';
-      // $action = l(t('Delete'), $path);
-      // FIXME need to check parent/child dependencies for cloned blocks.
-      $action = '-';
-    }
-    else {
-      $action = '-';
-    }
-    $rows[] = array(
-      $block['label'],
-      $image,
-      $preview_text,
-      $used_in,
-      $action,
-    );
   }
-  $markup = theme('table', array('header' => $header, 'rows' => $rows));
-  return $markup;
+  return $imageblocks_in_use;
 }

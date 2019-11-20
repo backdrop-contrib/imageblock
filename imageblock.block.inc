@@ -271,6 +271,7 @@ class BlockImage extends Block {
 
     // Additional content goes to a different config.
     $block = array();
+    $block['parent'] = $this->delta;
     $block['label'] = $form_state['values']['label'];
     $block['machine_name'] = $form_state['values']['machine_name'];
     $block['title'] = $form_state['values']['title'];
