@@ -90,7 +90,13 @@ function imageblock_block_delete_submit($form, &$form_state) {
 function imageblock_list() {
   backdrop_static_reset('imageblock_layout_usage');
 
-  $header = array('Admin label', 'Image', 'Text preview', 'Required for', 'Action');
+  $header = array(
+    t('Admin label'),
+    t('Image'),
+    t('Text preview'),
+    t('Required for'),
+    t('Action'),
+  );
   $rows = array();
   $config_names = config_get_names_with_prefix('imageblock.block.');
   $imageblock_usage = imageblock_layout_usage();
@@ -104,7 +110,7 @@ function imageblock_list() {
 
   foreach ($config_names as $config_name) {
     $block = config_get($config_name);
-    $preview_text = 'No text set';
+    $preview_text = t('No text set');
     if (!empty($block['title'])) {
       $plain = strip_tags($block['title']);
       $preview_text = $plain;
@@ -146,7 +152,7 @@ function imageblock_list() {
         $action = l(t('Delete'), $path, $link_options);
       }
       else {
-        $required_for = 'Has dependent block';
+        $required_for = t('Has dependent block');
       }
     }
     $rows[] = array(
@@ -158,7 +164,11 @@ function imageblock_list() {
     );
   }
   $markup = '<p>' . t('Please note: you can only delete Image blocks not in use in any layout and not parent of a copied block in use.') . '</p>';
-  $markup .= theme('table', array('header' => $header, 'rows' => $rows));
+  $markup .= theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'empty' => t('No image blocks (yet).'),
+  ));
   return $markup;
 }
 
