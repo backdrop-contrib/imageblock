@@ -4,5 +4,7 @@ backdrop = 1.x
 type = module
 package = User interface
 dependencies[] = image
+dependencies[] = system (>=1.14.0)
+
 configure = admin/structure/block/imageblock_configure
 stylesheets[all][] = css/imageblock.css
