@@ -277,8 +277,6 @@ class BlockImage extends Block {
     $block['title'] = $form_state['values']['title'];
     $block['content'] = $form_state['values']['content']['value'];
     $block['format'] = $form_state['values']['content']['format'];
-    // TODO file a core bug report for the hero block reg file usage!
-    // @see also https://github.com/backdrop/backdrop-issues/issues/4209
     if (!empty($form_state['values']['image'])) {
       if (!$this->is_new) {
         // Edit an existing block.

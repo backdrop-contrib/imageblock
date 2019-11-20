@@ -73,6 +73,8 @@ function imageblock_block_delete($form, &$form_state, $machine_name) {
  * Form submission handler to delete an Image block.
  */
 function imageblock_block_delete_submit($form, &$form_state) {
+  // FIXME validate function to check if this item is in use or has dependent.
+  // Like in imageblock_list when creating the link.
   if (!empty($form_state['values']['image'])) {
     $file = file_load($form_state['values']['image']);
     if ($file) {

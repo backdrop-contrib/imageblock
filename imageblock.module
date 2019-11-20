@@ -67,6 +67,13 @@ function imageblock_menu() {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function imageblock_permission() {
+  // TODO.
+}
+
+/**
  * Implements hook_config_info().
  */
 function imageblock_config_info() {
