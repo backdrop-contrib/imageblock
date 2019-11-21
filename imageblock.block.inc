@@ -45,25 +45,28 @@ class BlockImage extends Block {
       $elements['content'] = check_markup($content, $block['format'], '', TRUE);
     }
     if (!empty($block['image'])) {
+      $markup = '';
       $file = file_load($block['image']);
-      $variables = array(
-        'style_name' => 'thumbnail',
-        'uri' => $file->uri,
-        'width' => $file->width,
-        'height' => $file->height,
-        'alt' => $block['alt'],
-        'attributes' => array(),
-      );
-      if (!empty($block['img_title'])) {
-        $variables['attributes']['title'] = $block['img_title'];
-      }
+      if (is_a($file, 'File')) {
+        $variables = array(
+          'style_name' => 'thumbnail',
+          'uri' => $file->uri,
+          'width' => $file->width,
+          'height' => $file->height,
+          'alt' => $block['alt'],
+          'attributes' => array(),
+        );
+        if (!empty($block['img_title'])) {
+          $variables['attributes']['title'] = $block['img_title'];
+        }
 
-      $markup = theme('image', $variables);
-      if (!empty($block['image_style'])) {
-        $preset = image_style_load($block['image_style']);
-        if ($preset) {
-          $variables['style_name'] = $preset['name'];
-          $markup = theme('image_style', $variables);
+        $markup = theme('image', $variables);
+        if (!empty($block['image_style'])) {
+          $preset = image_style_load($block['image_style']);
+          if ($preset) {
+            $variables['style_name'] = $preset['name'];
+            $markup = theme('image_style', $variables);
+          }
         }
       }
       // Wrap image with a link tag.
