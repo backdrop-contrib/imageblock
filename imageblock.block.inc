@@ -71,8 +71,16 @@ class BlockImage extends Block {
       }
       // Wrap image with a link tag.
       if (!empty($block['link'])) {
+        $href = '';
+        if (valid_url($block['link']) || valid_url($block['link'], TRUE)) {
+          $href = $block['link'];
+        }
+        elseif (preg_match('/.+ \[(\d+)\]$/', $block['link'], $matches)) {
+          // Get alias from nid if input came via autocomplete.
+          $href = url('node/' . $matches[1]);
+        }
         $attributes = array();
-        $attributes['href'] = $block['link'];
+        $attributes['href'] = $href;
         if (!empty($block['link_target'])) {
           $attributes['target'] = $block['link_target'];
         }
@@ -215,12 +223,12 @@ class BlockImage extends Block {
       '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
       '#default_value' => isset($block['img_title']) ? $block['img_title'] : '',
     );
-    // FIXME find a better form item, "link" isn't usable with node/xx.
     $form['extended']['link'] = array(
-      '#type' => 'url',
+      '#type' => 'textfield',
       '#title' => t('Link'),
-      '#description' => t('Leave empty for no link.'),
+      '#description' => t('Leave empty for no link. Start typing to get suggestions, or paste a full url.'),
       '#default_value' => isset($block['link']) ? $block['link'] : '',
+      '#autocomplete_path' => 'node/autocomplete',
     );
     $form['extended']['link_target'] = array(
       '#type' => 'select',
