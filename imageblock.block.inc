@@ -156,8 +156,7 @@ class BlockImage extends Block {
       $upload_validators['file_validate_size'] = array($max_bytes);
     }
     if (!empty($config['imageblock_max_dimensions'])) {
-      // TODO file a core bug report reg. "undefined offset 1".
-      $upload_validators['file_validate_image_resolution'] = array($config['imageblock_max_dimensions'], '0');
+      $upload_validators['file_validate_image_resolution'] = array($config['imageblock_max_dimensions'], '');
     }
     $upload_description = theme('file_upload_help', array(
       'upload_validators' => $upload_validators,
