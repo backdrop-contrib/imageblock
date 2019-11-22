@@ -51,8 +51,8 @@ class BlockImage extends Block {
         $variables = array(
           'style_name' => 'thumbnail',
           'uri' => $file->uri,
-          'width' => $file->width,
-          'height' => $file->height,
+          'width' => isset($file->width) ? $file->width : NULL,
+          'height' => isset($file->height) ? $file->height : NULL,
           'alt' => $block['alt'],
           'attributes' => array(),
         );
