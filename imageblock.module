@@ -59,18 +59,12 @@ function imageblock_menu() {
     'title' => 'Delete Image block',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('imageblock_block_delete', 3),
-    'access arguments' => array('administer layouts'),
+    'access arguments' => array(3),
+    'access callback' => 'imageblock_delete_access',
     'type' => MENU_CALLBACK,
     'file' => 'imageblock.admin.inc',
   );
   return $items;
-}
-
-/**
- * Implements hook_permission().
- */
-function imageblock_permission() {
-  // TODO.
 }
 
 /**

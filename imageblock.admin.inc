@@ -73,8 +73,6 @@ function imageblock_block_delete($form, &$form_state, $machine_name) {
  * Form submission handler to delete an Image block.
  */
 function imageblock_block_delete_submit($form, &$form_state) {
-  // FIXME validate function to check if this item is in use or has dependent.
-  // Like in imageblock_list when creating the link.
   if (!empty($form_state['values']['image'])) {
     $file = file_load($form_state['values']['image']);
     if ($file) {
@@ -170,6 +168,34 @@ function imageblock_list() {
     'empty' => t('No image blocks (yet).'),
   ));
   return $markup;
+}
+
+/**
+ * Access callback function for imageblock delete form.
+ */
+function imageblock_delete_access($machine_name) {
+  $block = config_get('imageblock.block.' . $machine_name);
+  if ($block && user_access('administer layouts')) {
+    $config_names = config_get_names_with_prefix('imageblock.block.');
+    $imageblock_usage = imageblock_layout_usage();
+    $parents = array();
+    foreach ($config_names as $config_name) {
+      $parent = config_get($config_name, 'parent');
+      if ($parent && $parent != 'default') {
+        $parents[] = $parent;
+      }
+    }
+    if (in_array($block['machine_name'], $parents)) {
+      // Image block needed by a copy block.
+      return FALSE;
+    }
+    if (array_key_exists($block['machine_name'], $imageblock_usage)) {
+      // Image block is in use in a layout.
+      return FALSE;
+    }
+    return TRUE;
+  }
+  return FALSE;
 }
 
 /**
