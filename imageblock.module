@@ -75,6 +75,12 @@ function imageblock_config_info() {
     'label' => t('Image block settings'),
     'group' => t('Configuration'),
   );
+  // Note that image files are not exportable.
+  $prefixes['imageblock.block'] = array(
+    'name_key' => 'machine_name',
+    'label_key' => 'label',
+    'group' => t('Image blocks'),
+  );
   return $prefixes;
 }
 
