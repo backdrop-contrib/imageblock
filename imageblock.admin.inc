@@ -90,8 +90,6 @@ function imageblock_block_delete_submit($form, &$form_state) {
  * Callback to provide a listing page with all image blocks.
  */
 function imageblock_list() {
-  backdrop_static_reset('imageblock_layout_usage');
-
   $header = array(
     t('Admin label'),
     t('Image'),
@@ -178,24 +176,20 @@ function imageblock_list() {
  * Helper function to get all Image block usages in layouts.
  */
 function imageblock_layout_usage() {
-  $imageblocks_in_use = &backdrop_static(__FUNCTION__);
-
-  if (!isset($imageblocks_in_use)) {
-    $imageblocks_in_use = array();
-    module_load_include('inc', 'layout', 'layout.admin');
-    $usage = layout_get_block_usage();
-    if (isset($usage['imageblock'])) {
-      $delta = $usage['imageblock'];
-      foreach ($delta as $layouts) {
-        foreach ($layouts as $layout_name => $layout) {
-          foreach ($layout as $region_name => $region) {
-            foreach ($region as $imageblock) {
-              $imageblocks_in_use[$imageblock->settings['machine_name']] = array(
-                'layout' => $layout_name,
-                'layout_title' => $imageblock->layout_title,
-                'region' => $region_name,
-              );
-            }
+  $imageblocks_in_use = array();
+  module_load_include('inc', 'layout', 'layout.admin');
+  $usage = layout_get_block_usage();
+  if (isset($usage['imageblock'])) {
+    $delta = $usage['imageblock'];
+    foreach ($delta as $layouts) {
+      foreach ($layouts as $layout_name => $layout) {
+        foreach ($layout as $region_name => $region) {
+          foreach ($region as $imageblock) {
+            $imageblocks_in_use[$imageblock->settings['machine_name']] = array(
+              'layout' => $layout_name,
+              'layout_title' => $imageblock->layout_title,
+              'region' => $region_name,
+            );
           }
         }
       }
