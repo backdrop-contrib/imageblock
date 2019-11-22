@@ -2,11 +2,16 @@
 
 This module provides a block type to add a simple text snippet with an image
 to any region in your layouts.
+Image blocks are reusable.
+Images can have an alignment set (left/right/center), an image style
+applied, they can have a link or title...
 
-Please note: this port is in an early development stage, it might not be
-ready for production yet.
+There's an overview page for admins to delete unused blocks.
+Using Image blocks you can create fancy landing pages or whatever your
+fantasy yields.
 
-Especially the migration path from D7 needs more testing.
+Please note: the migration path from D7 needs more testing.
+It somewhat works but needs improvement.
 
 ## Installation
 
