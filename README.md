@@ -10,8 +10,8 @@ There's an overview page for admins to delete unused blocks.
 Using Image blocks you can create fancy landing pages or whatever your
 fantasy yields.
 
-Please note: the migration path from D7 needs more testing.
-It somewhat works but needs improvement.
+Please note: the migration path from D7 works fine for me, but might
+need testing under different circumstances.
 
 ## Installation
 
