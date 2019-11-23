@@ -20,14 +20,14 @@ function imageblock_uninstall() {
  * Implements hook_update_dependencies().
  */
 function imageblock_update_dependencies() {
-  // Block module drops a table we need in update 1002.
-  $dependencies['block'][1002] = array(
-    'imageblock' => 1001,
-  );
-  // Give us a chance to update the imageblock db entries
+  // Update the imageblock db entries
   // before system starts migrating all blocks.
   $dependencies['system'][1025] = array(
     'imageblock' => 1001,
+  );
+  // After block migration fix the incomplete info.
+  $dependencies['imageblock'][1002] = array(
+    'system' => 1025,
   );
   return $dependencies;
 }
@@ -51,34 +51,56 @@ function imageblock_update_1000() {
 }
 
 /**
- * Move individual blocks into config files.
+ * Implements hook_update_N().
  */
 function imageblock_update_1001() {
-  if (!db_table_exists('imageblock')) {
-    return;
-  }
+  $schema_title = array(
+    'type' => 'varchar',
+    'length' => 128,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field('imageblock', 'title', $schema_title);
+  $schema_machine = array(
+    'type' => 'varchar',
+    'length' => 32,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field('imageblock', 'machine', $schema_machine);
 
-  if (db_table_exists('block')) {
-    $query = "SELECT imageblock.*, block.title FROM {imageblock} LEFT JOIN {block} ON imageblock.bid = block.delta";
-    $query .= " WHERE block.module = 'imageblock' GROUP BY imageblock.bid";
-  }
-  else {
-    // In case DB table "block" is already gone,
-    // although our module declared an update dependeny.
-    // We lost the titles but can get the rest.
-    $query = "SELECT * FROM {imageblock}";
-  }
-  $blocks = db_query($query)->fetchAllAssoc('bid');
-  foreach ($blocks as $block) {
+  $query = "SELECT imageblock.*, block.title FROM {imageblock} LEFT JOIN {block} ON imageblock.bid = block.delta";
+  $query .= " WHERE block.module = 'imageblock' GROUP BY imageblock.bid";
+
+  $results = db_query($query)->fetchAllAssoc('bid');
+  foreach ($results as $bid => $block) {
     $block = (array) $block;
     $clean = preg_replace('/[^a-z0-9_]+/', '_', strtolower(trim($block['info'])));
-    $machine_name = 'id_' . $block['bid'] . '_' . substr($clean, 0, 20);
+    $machine_name = 'id_' . $bid . '_' . substr($clean, 0, 22);
+    $title = $block['title'];
+    if ($block['title'] == '<none>') {
+      $title = '';
+    }
+    // Save important data for later usage.
+    db_update('imageblock')
+      ->condition('bid', $bid)
+      ->fields(array(
+        'machine' => $machine_name,
+        'title' => $title,
+      ))
+      ->execute();
+    // Populate block delta with machine name.
+    db_update('block')
+      ->fields(array('delta' => $machine_name))
+      ->condition('module', 'imageblock')
+      ->condition('delta', $bid)
+      ->execute();
+    // Move individual blocks into config files.
     $settings = unserialize($block['data']);
     $data = array(
       'label' => $block['info'],
       'machine_name' => $machine_name,
       'parent' => 'default',
-      'title' => isset($block['title']) ? $block['title'] : '',
       'content' => $block['body'],
       'format' => $block['format'],
       'image' => $block['fid'],
@@ -93,19 +115,46 @@ function imageblock_update_1001() {
     $config = config('imageblock.block.' . $machine_name);
     $config->setData($data);
     $config->save();
-    db_update('block')
-      ->fields(array('delta' => $machine_name))
-      ->condition('module', 'imageblock')
-      ->condition('delta', $block['bid'])
-      ->execute();
   }
+}
 
+/**
+ * Implements hook_update_N().
+ */
+function imageblock_update_1002() {
+  // Now use backed up data to repair otherwise broken image blocks.
+  $query = "SELECT machine, title, info FROM {imageblock}";
+  $result = db_query($query)->fetchAllAssoc('machine');
+  $names = config_get_names_with_prefix('imageblock.block.');
+  foreach ($names as $name) {
+    $parts = explode('.', $name);
+    $machine_name = $parts[2];
+    require_once BACKDROP_ROOT . '/core/modules/layout/layout.module';
+    module_load_include('inc', 'layout', 'layout.admin');
+    // TODO file a core bugreport reg 'undefined index'.
+    // Then the @ will hopefully become redundant.
+    @$usage = layout_get_block_usage('imageblock', $machine_name);
+    if (is_array($usage)) {
+      foreach ($usage as $layout_name => $layout) {
+        foreach ($layout as $region_name => $region) {
+          foreach ($region as $key => $block) {
+            $db_info = $result[$machine_name];
+            $config_name = 'layout.layout.' . $layout_name;
+            $uuid = $block->uuid;
+            $config_trail = 'content.' . $uuid . '.data.settings.';
+            $options = array(
+              $config_trail . 'title_display' => LAYOUT_TITLE_CUSTOM,
+              $config_trail . 'title' => $db_info->title,
+              $config_trail . 'label' => $db_info->info,
+              $config_trail . 'machine_name' => $machine_name,
+            );
+            config_set_multiple($config_name, $options);
+          }
+        }
+      }
+    }
+  }
   db_drop_table('imageblock');
-  // FIXME how to get "machine_name" and "label" into layout config files?
-  // Until I find a way, drop db rows to prevent broken Image Blocks.
-  db_delete('block')
-    ->condition('module', 'imageblock')
-    ->execute();
 }
 
 /**

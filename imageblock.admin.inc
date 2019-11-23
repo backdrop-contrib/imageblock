@@ -204,7 +204,7 @@ function imageblock_delete_access($machine_name) {
 function imageblock_layout_usage() {
   $imageblocks_in_use = array();
   module_load_include('inc', 'layout', 'layout.admin');
-  $usage = layout_get_block_usage();
+  @$usage = layout_get_block_usage();
   if (isset($usage['imageblock'])) {
     $delta = $usage['imageblock'];
     foreach ($delta as $layouts) {
