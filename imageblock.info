@@ -6,5 +6,5 @@ package = User interface
 dependencies[] = image
 dependencies[] = system (>=1.14.0)
 
-configure = admin/structure/block/imageblock_configure
+configure = admin/structure/imageblock/imageblock_configure
 stylesheets[all][] = css/imageblock.css
