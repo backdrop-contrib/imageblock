@@ -297,7 +297,9 @@ class BlockImage extends Block {
           if (!empty($form['image']['#default_value'])) {
             // Remove usage from old (replaced) file.
             $old_file = file_load($form['image']['#default_value']);
-            file_usage_delete($old_file, 'imageblock');
+            if ($old_file) {
+              file_usage_delete($old_file, 'imageblock');
+            }
           }
         }
       }
