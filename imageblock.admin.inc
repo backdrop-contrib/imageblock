@@ -40,6 +40,9 @@ function imageblock_admin_settings_form() {
  */
 function imageblock_admin_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
+  if (!preg_match('/^[a-zA-Z0-9_-]*$/', $values['imageblock_image_path'])) {
+    form_set_error('imageblock_image_path', t('The directory name contains invalid characters. Only alphanumeric characters, hyphens and underscores are allowed.'));
+  }
   foreach (array('imageblock_max_file_size') as $size) {
     if (!empty($values[$size]) && !is_numeric(parse_size($values[$size]))) {
       form_error($size, t('The "@field" option must contain a valid value. You can either leave the text field empty or enter a string like "512" (bytes), "80K" (kilobytes) or "50M" (megabytes).', array('@field' => t('Maximum upload size per file'))));
