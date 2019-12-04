@@ -8,7 +8,9 @@
     margin: 8px 0 10px 30px;
   }
   .imageblock-image-left .block-image,
-  .imageblock-image-left .block-body {
+  .imageblock-image-left .block-body,
+  .imageblock-image-right .block-image,
+  .imageblock-image-right .block-body {
     display: table;
   }
   .imageblock-image-left .block-body > * {
