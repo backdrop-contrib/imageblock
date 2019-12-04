@@ -13,6 +13,7 @@
   .imageblock-image-right .block-body {
     display: table;
   }
+  .imageblock-image-right .block-body > *,
   .imageblock-image-left .block-body > * {
     margin-top: 0;
   }
