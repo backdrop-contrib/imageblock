@@ -21,3 +21,19 @@
 .imageblock-image-center .block-image {
   text-align: center;
 }
+.imageblock-parallaxe {
+  padding: 5% 1.25rem;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@media screen and (min-width: 720px) {
+  .imageblock-parallaxe {
+    background-attachment: fixed;
+  }
+}
+@media screen and (min-width: 1200px) {
+  .imageblock-parallaxe {
+    padding: 10% 1.25rem;
+  }
+}

@@ -36,6 +36,7 @@ class BlockImage extends Block {
     $elements = array(
       'content' => '',
       'image' => '',
+      'img_url' => '',
       'wrapper_classes' => 'imageblock-inner',
     );
 
@@ -46,31 +47,43 @@ class BlockImage extends Block {
     }
     if (!empty($block['image'])) {
       $markup = '';
+      $image_style = FALSE;
+      if (!empty($block['image_style'])) {
+        $image_style = image_style_load($block['image_style']);
+      }
       $file = file_load($block['image']);
       if (is_a($file, 'File')) {
-        $variables = array(
-          'style_name' => 'thumbnail',
-          'uri' => $file->uri,
-          'width' => isset($file->width) ? $file->width : NULL,
-          'height' => isset($file->height) ? $file->height : NULL,
-          'alt' => $block['alt'],
-          'attributes' => array(),
-        );
-        if (!empty($block['img_title'])) {
-          $variables['attributes']['title'] = $block['img_title'];
+        if ($block['image_align'] == 'parallax') {
+          if ($image_style) {
+            $elements['img_url'] = image_style_url($image_style['name'], $file->uri);
+          }
+          else {
+            $elements['img_url'] = file_create_url($file->uri);
+          }
         }
-
-        $markup = theme('image', $variables);
-        if (!empty($block['image_style'])) {
-          $preset = image_style_load($block['image_style']);
-          if ($preset) {
-            $variables['style_name'] = $preset['name'];
+        else {
+          $variables = array(
+            'style_name' => 'thumbnail',
+            'uri' => $file->uri,
+            'width' => isset($file->width) ? $file->width : NULL,
+            'height' => isset($file->height) ? $file->height : NULL,
+            'alt' => $block['alt'],
+            'attributes' => array(),
+          );
+          if (!empty($block['img_title'])) {
+            $variables['attributes']['title'] = $block['img_title'];
+          }
+          if ($image_style) {
+            $variables['style_name'] = $image_style['name'];
             $markup = theme('image_style', $variables);
+          }
+          else {
+            $markup = theme('image', $variables);
           }
         }
       }
       // Wrap image with a link tag.
-      if (!empty($block['link'])) {
+      if (!empty($block['link']) && $block['image_align'] != 'parallax') {
         $href = '';
         if (valid_url($block['link']) || valid_url($block['link'], TRUE)) {
           $href = $block['link'];
@@ -102,6 +115,10 @@ class BlockImage extends Block {
 
           case 'center':
             $elements['wrapper_classes'] .= ' imageblock-image-center';
+            break;
+
+          case 'parallax':
+            $elements['wrapper_classes'] .= ' imageblock-parallaxe';
             break;
         }
       }
@@ -202,26 +219,36 @@ class BlockImage extends Block {
     }
     $form['extended']['image_align'] = array(
       '#type' => 'select',
-      '#title' => t('Image alignment'),
+      '#title' => t('Image appearance'),
       '#options' => array(
-        '' => t('None'),
-        'left' => t('Left'),
-        'right' => t('Right'),
-        'center' => t('Center'),
+        '' => t('As is'),
+        'left' => t('Left of content'),
+        'right' => t('Right of content'),
+        'center' => t('Centered above content'),
+        'parallax' => t('Parallaxe background'),
       ),
+      '#description' => t('How to show the image. As is (above content) or aligned or as a parallaxe background.'),
       '#default_value' => isset($block['image_align']) ? $block['image_align'] : '',
+    );
+    // Background images can't have alt, title, link...
+    $formitem_states = array(
+      'invisible' => array(
+        ':input[name="extended[image_align]"]' => array('value' => 'parallax'),
+      ),
     );
     $form['extended']['alt'] = array(
       '#type' => 'textfield',
       '#title' => t('Alternate text'),
       '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
       '#default_value' => isset($block['alt']) ? $block['alt'] : '',
+      '#states' => $formitem_states,
     );
     $form['extended']['img_title'] = array(
       '#type' => 'textfield',
       '#title' => t('Title'),
       '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
       '#default_value' => isset($block['img_title']) ? $block['img_title'] : '',
+      '#states' => $formitem_states,
     );
     $form['extended']['link'] = array(
       '#type' => 'textfield',
@@ -229,6 +256,7 @@ class BlockImage extends Block {
       '#description' => t('Leave empty for no link. Start typing to get suggestions, or paste a full url.'),
       '#default_value' => isset($block['link']) ? $block['link'] : '',
       '#autocomplete_path' => 'node/autocomplete',
+      '#states' => $formitem_states,
     );
     $form['extended']['link_target'] = array(
       '#type' => 'select',
@@ -241,12 +269,14 @@ class BlockImage extends Block {
         '_top' => '_top',
       ),
       '#default_value' => isset($block['link_target']) ? $block['link_target'] : '',
+      '#states' => $formitem_states,
     );
     $form['extended']['nofollow'] = array(
       '#type' => 'checkbox',
       '#title' => t('NoFollow option'),
       '#description' => t('Mark this item if you want add rel=nofollow to your link.'),
       '#default_value' => !empty($block['nofollow']) ? $block['nofollow'] : FALSE,
+      '#states' => $formitem_states,
     );
     $form['content'] = array(
       '#type' => 'text_format',
