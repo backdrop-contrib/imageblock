@@ -317,6 +317,37 @@ class BlockImage extends Block {
     $block['title'] = $form_state['values']['title'];
     $block['content'] = $form_state['values']['content']['value'];
     $block['format'] = $form_state['values']['content']['format'];
+
+    // Record file usage inside block body.
+    $file_usages = db_select('file_usage', 'f')
+      ->fields('f', array('fid'))
+      ->condition('module', 'imageblock')
+      ->condition('type', $block['machine_name'])
+      ->execute()
+      ->fetchAllAssoc('fid', PDO::FETCH_ASSOC);
+    $content_fids = filter_parse_file_fids($block['content']);
+    $files = file_load_multiple($content_fids);
+    foreach ($files as $fid => $file) {
+      if ($file->status != FILE_STATUS_PERMANENT) {
+        // Using the machine_name for type is a bit dirty,
+        // and so is using the file fid as object fid.
+        file_usage_add($file, 'imageblock', $block['machine_name'], $fid);
+      }
+      else {
+        if (!array_key_exists($fid, $file_usages)) {
+          file_usage_add($file, 'imageblock', $block['machine_name'], $fid);
+        }
+      }
+    }
+    foreach ($file_usages as $old_fid => $value) {
+      if (!in_array($old_fid, $content_fids)) {
+        $file = file_load($old_fid);
+        if ($file) {
+          file_usage_delete($file, 'imageblock', $block['machine_name'], $old_fid);
+        }
+      }
+    }
+
     if (!empty($form_state['values']['image'])) {
       if (!$this->is_new) {
         // Edit an existing block.
