@@ -327,8 +327,9 @@ class BlockImage extends Block {
       ->fetchAllAssoc('fid', PDO::FETCH_ASSOC);
     $content_fids = filter_parse_file_fids($block['content']);
     $files = file_load_multiple($content_fids);
+    $status_permanent = FILE_STATUS_PERMANENT;
     foreach ($files as $fid => $file) {
-      if ($file->status != FILE_STATUS_PERMANENT) {
+      if ($file->status !== "$status_permanent") {
         // Using the machine_name for type is a bit dirty,
         // and so is using the file fid as object fid.
         file_usage_add($file, 'imageblock', $block['machine_name'], $fid);
