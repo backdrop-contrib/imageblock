@@ -126,6 +126,7 @@ function imageblock_load($name = '') {
  */
 function imageblock_preprocess_block(&$variables) {
   if ($variables['block']->module == 'imageblock') {
+    $variables['classes'][] = 'block-imageblock';
     if ($variables['block']->delta == 'default') {
       $machine_name = $variables['block']->settings['machine_name'];
       $variables['classes'][] = backdrop_html_class('block-imageblock-' . $machine_name);
