@@ -140,6 +140,7 @@ class BlockImage extends Block {
           $block = config_get('imageblock.block.' . $block_info[1]);
           // Force new machine name.
           $this->settings['machine_name'] = '';
+          $this->settings['title'] = $block['title'];
         }
       }
     }
@@ -172,6 +173,7 @@ class BlockImage extends Block {
     // Simplify title settings as Image blocks have no default title.
     $form['title_display']['title_display']['#default_value'] = LAYOUT_TITLE_CUSTOM;
     $form['title_display']['title_display']['#access'] = FALSE;
+    $form['title_display']['title']['#default_value'] = $this->settings['title'];
     $form['title_display']['title']['#description'] = t('Leave empty for no block title.');
     // Add an image.
     $upload_validators = array('file_validate_extensions' => array('jpg jpeg png gif'));
