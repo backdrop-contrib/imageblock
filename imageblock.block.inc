@@ -176,7 +176,14 @@ class BlockImage extends Block {
     $form['title_display']['title']['#default_value'] = $this->settings['title'];
     $form['title_display']['title']['#description'] = t('Leave empty for no block title.');
     // Add an image.
-    $upload_validators = array('file_validate_extensions' => array('jpg jpeg png gif'));
+    $extensions = 'jpg jpeg png gif';
+    if (config_get('system.core', 'image_toolkit') == 'gd' && defined('IMAGETYPE_WEBP')) {
+      $gd_info = gd_info();
+      if (isset($gd_info['WebP Support']) && $gd_info['WebP Support'] == TRUE) {
+        $extensions .= ' webp';
+      }
+    }
+    $upload_validators = array('file_validate_extensions' => array($extensions));
     $config = config_get('imageblock.settings');
     if (!empty($config['imageblock_max_file_size'])) {
       $max_bytes = parse_size($config['imageblock_max_file_size']);
