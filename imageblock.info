@@ -2,7 +2,7 @@ name = Image Block
 description = Provides a file field in block configuration form for displaying an image in a block.
 backdrop = 1.x
 type = module
-package = User interface
+package = User Interface
 dependencies[] = image
 dependencies[] = system (>=1.14.0)
 
