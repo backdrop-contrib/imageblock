@@ -125,14 +125,20 @@ function imageblock_list() {
       $file = file_load($block['image']);
       if ($file) {
         $variables = array(
-          'style_name' => 'thumbnail',
           'uri' => $file->uri,
           'width' => isset($file->width) ? $file->width : NULL,
           'height' => isset($file->height) ? $file->height : NULL,
           'alt' => '',
           'attributes' => array(),
         );
-        $image = theme('image_style', $variables);
+        if ($file->filemime != 'image/svg+xml') {
+          $variables['style_name'] = 'thumbnail';
+          $image = theme('image_style', $variables);
+        }
+        else {
+          $variables['width'] = 100;
+          $image = theme('image', $variables);
+        }
       }
     }
     $required_for = '-';
