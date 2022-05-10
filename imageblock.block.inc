@@ -74,8 +74,17 @@ class BlockImage extends Block {
             $variables['attributes']['title'] = $block['img_title'];
           }
           if ($image_style) {
-            $variables['style_name'] = $image_style['name'];
-            $markup = theme('image_style', $variables);
+            if ($file->filemime != 'image/svg+xml') {
+              $variables['style_name'] = $image_style['name'];
+              $markup = theme('image_style', $variables);
+            }
+            else {
+              $width = $this->extractEffectWidth($image_style);
+              if ($width) {
+                $variables['width'] = $width;
+              }
+              $markup = theme('image', $variables);
+            }
           }
           else {
             $markup = theme('image', $variables);
@@ -176,7 +185,7 @@ class BlockImage extends Block {
     $form['title_display']['title']['#default_value'] = $this->settings['title'];
     $form['title_display']['title']['#description'] = t('Leave empty for no block title.');
     // Add an image.
-    $extensions = 'jpg jpeg png gif';
+    $extensions = 'jpg jpeg png gif svg';
     if (config_get('system.core', 'image_toolkit') == 'gd' && defined('IMAGETYPE_WEBP')) {
       $gd_info = gd_info();
       if (isset($gd_info['WebP Support']) && $gd_info['WebP Support'] == TRUE) {
@@ -359,12 +368,12 @@ class BlockImage extends Block {
     }
 
     if (!empty($form_state['values']['image'])) {
+      $current_file = file_load($form_state['values']['image']);
       if (!$this->is_new) {
         // Edit an existing block.
         if ($form_state['values']['image'] != $form['image']['#default_value']) {
-          $new_file = file_load($form_state['values']['image']);
           // Set file usage on new file, also marks permanent.
-          file_usage_add($new_file, 'imageblock', 'block', $new_file->fid);
+          file_usage_add($current_file, 'imageblock', 'block', $current_file->fid);
           if (!empty($form['image']['#default_value'])) {
             // Remove usage from old (replaced) file.
             $old_file = file_load($form['image']['#default_value']);
@@ -376,8 +385,7 @@ class BlockImage extends Block {
       }
       else {
         // New block or copy of an existing block, increase file usage.
-        $file = file_load($form_state['values']['image']);
-        file_usage_add($file, 'imageblock', 'block', $file->fid);
+        file_usage_add($current_file, 'imageblock', 'block', $current_file->fid);
       }
     }
     else {
@@ -402,6 +410,36 @@ class BlockImage extends Block {
     $config = config('imageblock.block.' . $block['machine_name']);
     $config->setData($block);
     $config->save();
+  }
+
+  /**
+   * Try to extract a width value from an image style.
+   *
+   * Image styles do not necessarily scale or crop, so a width value may exist
+   * or not.
+   *
+   * @param array $image_style
+   *   The image style definitions.
+   *
+   * @return
+   *   Number (width in pixels) or FALSE if the style doesn't resize.
+   */
+  protected function extractEffectWidth($image_style) {
+    $style_widths = &backdrop_static(__METHOD__, array());
+    $style_name = $image_style['name'];
+
+    if (!isset($style_widths[$style_name])) {
+      $width = FALSE;
+      foreach ($image_style['effects'] as $index => $values) {
+        if (!empty($values['data']['width'])) {
+          // The last width value wins.
+          $width = $values['data']['width'];
+        }
+      }
+      $style_widths[$style_name] = $width;
+    }
+
+    return $style_widths[$style_name];
   }
 
 }
