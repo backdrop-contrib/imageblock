@@ -164,7 +164,11 @@ function imageblock_list() {
       $action,
     );
   }
-  $markup = '<p>' . t('Please note: you can only delete Image blocks not in use in any layout and not parent of a copied block in use.') . '</p>';
+  $markup = '<p>' . t('Please note:') . '</p>';
+  $markup .= '<ul>';
+  $markup .= '<li>' . t ('You can only delete Image blocks not in use in any layout and not parent of a copied block in use.') . '</li>';
+  $markup .= '<li>' . t ('You can create new Image blocks by adding an Image block to a layout.') . '</li>';
+  $markup .= '</ul>';
   $markup .= theme('table', array(
     'header' => $header,
     'rows' => $rows,

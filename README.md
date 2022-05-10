@@ -16,6 +16,14 @@ need testing under different circumstances.
 
 Install this module using the official Backdrop CMS instructions at https://backdropcms.org/guide/modules
 
+## Usage
+
+1. Navigate to the layout where you want the Image block.
+2. Click to add a block and search for "Image block".
+3. Add a file and configure the settings to meet your needs.
+4. To reuse an existing Image block on another layout, search for the block. 
+  This will create a separate instance of the block.
+
 ## Dependencies
 
 The image module is required (ships with core and is usually enabled).
