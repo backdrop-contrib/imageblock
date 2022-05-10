@@ -425,20 +425,21 @@ class BlockImage extends Block {
    *   Number (width in pixels) or FALSE if the style doesn't resize.
    */
   protected function extractEffectWidth($image_style) {
-    $style_width = &backdrop_static(__METHOD__);
+    $style_widths = &backdrop_static(__METHOD__, array());
+    $style_name = $image_style['name'];
 
-    if (!isset($style_width)) {
-      $width = 4000;
+    if (!isset($style_widths[$style_name])) {
+      $width = FALSE;
       foreach ($image_style['effects'] as $index => $values) {
         if (!empty($values['data']['width'])) {
-          // Get the smallest value.
-          $width = min($width, $values['data']['width']);
+          // The last width value wins.
+          $width = $values['data']['width'];
         }
       }
-      $style_width = ($width < 4000) ? $width : FALSE;
+      $style_widths[$style_name] = $width;
     }
 
-    return $style_width;
+    return $style_widths[$style_name];
   }
 
 }
